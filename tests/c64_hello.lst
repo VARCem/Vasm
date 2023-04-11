@@ -1,0 +1,52 @@
+VARCem VASM version 1.0.10 (Windows, x86)            04/11/23 00:34:32    Page 1
+                                                                    File: h1.asm
+
+                             1: ; Preamble to create a C64 .PRG file.
+                             2: 
+                             3: SYS	= $9E			; basic SYS token number
+                             4: 
+                             5: LOAD	= $0801			; load address
+                             6: 
+0000  0000  01 08            7: 	.word	LOAD		; .PRG header: load address
+                             8: 	.org	LOAD
+                             9: 
+                            10: basic:				; BASIC code: 10 SYS 2062
+0002  0801  0C 08 0A        11:         .word @end, 10          ; ptr to next basic line and line number 10
+0006  0805  9E 20 32 ...    12:         .byte SYS, " 2062", 0   ; SYS token and address string of subroutine
+000D  080C  00 00           13: @end    .word 0                 ; null ptr to indicate end of basic text
+                            14: 
+                            15: ; End of preamble code.
+                             1: ; C64 Hello World
+                             2: ; assemble to .PRG file: vasm -o hello.prg c64.asm c64_hello.asm
+                             3: 
+                             4: CHROUT = $FFD2                  ; kernal function address
+                             5: CR     = 13                     ; carrige return character
+                             6: LF     = %1010                  ; line feed character
+                             7: 
+                             8: main:				; this is at address 2062 ($080E)
+000F  080E  A2 00            9: 	ldx	#0
+0011  0810  BD 1C 08        10: @l	lda	msg, x
+0014  0813  20 D2 FF        11: 	jsr	CHROUT
+0017  0816  E8              12: 	inx
+0018  0817  E0 0F           13: 	cpx	#len
+001A  0819  D0 F5           14: 	bne	@l
+001C  081B  60              15: 	rts
+                            16: 
+001D  081C  48 45 4C ...    17: msg	.byte	"HELLO, WORLD!", CR, LF
+                            18: len	= @ - msg
+                            19: 
+                            20: ; End of file.
+VARCem VASM version 1.0.10 (Windows, x86)            04/11/23 00:34:32    Page 2
+** SYMBOL TABLE **                                                  File: h2.asm
+
+basic                            L 0801 W        h1.asm:10
+  @end                             080C          h1.asm:10
+CHROUT                           V FFD2 W        h2.asm:4
+CR                               V 000D B        h2.asm:5
+len                              V 000F W        h2.asm:18
+LF                               V 000A B        h2.asm:6
+LOAD                             V 0801 W        h1.asm:5
+main                             L 080E W        h2.asm:8
+  @l                               0810          h2.asm:8
+msg                              L 081C W        h2.asm:17
+SYS                              V 009E B        h1.asm:3

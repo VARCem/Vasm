@@ -1,0 +1,53 @@
++ implement full getopt interface
++ full source restructuring, broken up into modules
++ allow 'X' for .byte
++ fix .org to auto-fill
++ add a .end directive
++ implement .fill
++ fix the symbol table stuff, added 'where' to them
++ add generating hex files for output
++ add << and >> operators in expressions
++ fix the ^ and / operators in expressions
++ fix the ! (NOT) operator, added the ~ alias
++ support '.', '*' and '$' for "current", not just @
++ added "EQU" in addition to "="
++ implement .binary (and .blob) for binary blob imports
++ add ".page [plen[,pwidth]" and ".title [str]" directives
++ add paged listing file
++ add .cpu directive and underlying multi-target support
+- implement .nol option
+- implement .sym option
+- allow [] for expressions, not just ()
++ implement multiple source files on command line
++ add generating .s19 et al (Motorola) files for output
+
+- Add C02/RC02/WC02/816, 68xx, 80xx et al support.
+  The basic infrastructure for multi-CPU support is in now in place; we can
+  start adding more processors and their (sub-)models in the backend files.
+
+- Filling, ORG and hex files.
+  We currently allow for filling spaces and auto-filling the .org directive
+  for use with straight-binary output files. This is, however, not necessary
+  if we are using hex (IntelHEX) or srec (Motorola SRecord) output files, as
+  those formats "know" that data does not have to be linear. For this to be
+  implemented properly, we will have to re-work the "generating output" code
+  to do it as it goes (in pass 2), and not only at the end of that pass. This
+  allows such "jumping" to be handled by those file formats.
+
++ Reading raw source data.
+  We currently perform binary-mode reads on the input source files and all
+  included files. Although this works fine on Linux (and, assumedly, on all
+  such systems), it does not seem to behave the same way on Windows systems.
+  The problem is that while we do an ftell() to get the size of a file, that
+  will give us the "raw" size of the file, as it is on disk. We then allocate
+  a buffer for the file using that size, and then read the file's data into
+  the buffer using the fread(3) function. This is where things go wrong: EVEN
+  if we open the file in BINARY ("rb") mode, the fread() function will STILL
+  perform newline processing, resulting it it returning LESS data than we
+  requested: it has stripped off the CR characters.. This was confirmed to
+  be the case with both the MinGW-w64 (gcc) AND Microsoft's own Visual Studio
+  compilers. Since MinGW uses the actual runtime from Microsoft (relatively
+  old versions of the msvcrt.dll), this is most likely the source of it.
+  That said, reading text files in binary mode is not a good practice to
+  begin with, so most likely this problem will be fixed by changing the input
+  scanner to process all input files in ASCII (text) mode instead. DONE.
