@@ -1,3 +1,6 @@
+# Local stuff
+.gitignore
+
 # Prerequisites
 *.d
 
