@@ -602,6 +602,8 @@ expr(char **p)
 	/* Lossless conversion to word. */
 	*p += 3;
 	v = compare(p);
+	if (DEFINED(v) && v.v > 0xffff)
+		error(ERR_RNG_WORD, NULL);
 	SET_TYPE(v, TYPE_WORD);
     } else {
 	/* Iterate. */
