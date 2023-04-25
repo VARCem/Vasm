@@ -8,7 +8,7 @@
  *
  *		Handle all functions.
  *
- * Version:	@(#)func.c	1.0.1	2023/04/22
+ * Version:	@(#)func.c	1.0.2	2023/04/25
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -134,13 +134,15 @@ function(const char *name, char **p)
 {
     const func_t *ptr;
     value_t res = { 0 };
+    int i;
 
     /* Skip any whitespace. */
     skip_white(p);
 
     for (ptr = functions; ptr->name != NULL; ptr++) {
-	if (! strcmp(ptr->name, name)) {
-		res = ptr->func(p);
+	if ((i = strcmp(ptr->name, name)) >= 0) {
+		if (i == 0)
+			res = ptr->func(p);
 		break;
 	}
     }

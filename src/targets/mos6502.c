@@ -14,7 +14,7 @@
  *		version produced later. The CMOS version also has variants
  *		from Rockwell and WDC, with even more changes.
  *
- * Version:	@(#)mos6502.c	1.0.3	2023/04/18
+ * Version:	@(#)mos6502.c	1.0.4	2023/04/25
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -607,11 +607,15 @@ op_abs_zp(int pass, const opcode_t *instr, value_t v)
 static const opcode_t *
 get_mnemonic(const opcode_t *table, int size, const char *p)
 {
-    int i;
+    int i, k;
 
-    for (i = 0; i < size; i++)
-	if (! strcmp(p, table[i].mn))
-		return &table[i];
+    for (k = 0; k < size; k++) {
+	if ((i = strcmp(table[k].mn, p)) >= 0) {
+		if (i == 0)
+			return &table[k];
+		break;
+	}
+    }
 
    return NULL;
 }
