@@ -1,9 +1,9 @@
 # Local stuff
 .gitignore
-t.*
-test*.*
-hello.*
+.depends*
+foo*
 *.cmd
+tests/
 
 # Prerequisites
 *.d
