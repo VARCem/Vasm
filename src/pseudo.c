@@ -1015,6 +1015,7 @@ static const pseudo_t pseudos[] = {
   { "ENDIF",	1, do_endif,	NULL	},
   { "ERROR",	0, do_error,	NULL	},
   { "EQU",	0, do_equ,	NULL	},
+  { "FI",	1, do_endif,	NULL	},
   { "FILL",	0, do_fill,	NULL	},
   { "IF",	1, do_if,	NULL	},
   { "IFDEF",	1, do_ifdef,	NULL	},
