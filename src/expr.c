@@ -333,14 +333,15 @@ product(char **p)
 
     while ((op == '*') || (op == '&') || (op == '/') || (op == '%') ||
 	   (op == '<' && op2 == '<') || (op == '>' && op2 == '>') ||
-	   (op == '|' && op2 == '|') || (op == '&' && op2 == '&')) {
+	   (op == '|' && op2 == '|') || (op == '&' && op2 == '&') ||
+	   (op == '?' && op2 == ':')) {
 
 	/* Skip operator. */
 	(*p)++;
 
 	/* For double-character operators, skip the second character. */
 	if ((op == '<' || op == '>' || op == '|') ||
-	    (op == '&' && op2 == '&'))
+	    (op == '&' && op2 == '&') || (op == '?' && op2 == ':'))
 		(*p)++;
 
 	n2 = primary(p, 1);
@@ -382,6 +383,11 @@ product(char **p)
 
 		case '>':	// bitwise shift RIGHT
 			res.v = res.v >> n2.v;
+			break;
+
+		case '?':	// undefined default
+			if (! DEFINED(res))
+				res = n2;
 			break;
 	}
 	INFER_TYPE(res, n2);
@@ -557,7 +563,10 @@ expr(char **p)
 #endif
 
     op = **p;
-    if (starts_with(*p, "NOT ")) { op = '~'; *p += 4; };
+    if (starts_with(*p, "NOT ")) {
+	op = '~';
+	*p += 4;
+    };
 
     if (op == '>') {
 	/* High-byte (MSB) operator. */

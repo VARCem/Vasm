@@ -8,7 +8,7 @@
  *
  *		Handle directives and pseudo-ops.
  *
- * Version:	@(#)pseudo.c	1.0.2	2023/04/22
+ * Version:	@(#)pseudo.c	1.0.3	2023/04/25
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -596,6 +596,39 @@ do_ifdef(char **p, int pass)
 }
 
 
+/* The ".ifn <expr>" directive. */
+static char *
+do_ifn(char **p, int pass)
+{
+    value_t v;
+
+    skip_white(p);
+
+    /* Get the value of the expression. */
+    v = expr(p);
+
+    /*
+     * It may have been that one of the symbols
+     * referenced was not defined. We can make
+     * this an error, or simply "assume" the
+     * value to be 0.
+     */
+    if ((pass == 2) && UNDEFINED(v)) {
+#ifndef ALLOW_UNDEFINED_IF
+	error(ERR_UNDEF, NULL);
+#endif
+    }
+
+    if (iflevel < MAX_IFLEVEL) {
+	ifstack[iflevel++] = ifstate;
+	newifstate = !!!v.v;
+    } else
+	error(ERR_IF, NULL);
+
+    return NULL;
+}
+
+
 /* The ".ifndef <name>" directive. */
 static char *
 do_ifndef(char **p, int pass)
@@ -963,11 +996,6 @@ do_warn(char **p, int pass)
 
 
 static const pseudo_t pseudos[] = {
-  { "IF",	1, do_if,	NULL	},
-  { "IFDEF",	1, do_ifdef,	NULL	},
-  { "IFNDEF",	1, do_ifndef,	NULL	},
-  { "ELSE",	1, do_else,	NULL	},
-  { "ENDIF",	1, do_endif,	NULL	},
   { "ALIGN",	0, do_align,	NULL	},
   { "ASCIIZ",	0, do_asciz,	NULL	},
   { "ASCIZ",	0, do_asciz,	NULL	},
@@ -982,10 +1010,16 @@ static const pseudo_t pseudos[] = {
   { "DL",	0, do_dword,	NULL	},
   { "DW",	0, do_word,	NULL	},
   { "ECHO",	0, do_echo,	NULL	},
+  { "ELSE",	1, do_else,	NULL	},
   { "END",	0, do_end,	NULL	},
+  { "ENDIF",	1, do_endif,	NULL	},
   { "ERROR",	0, do_error,	NULL	},
   { "EQU",	0, do_equ,	NULL	},
   { "FILL",	0, do_fill,	NULL	},
+  { "IF",	1, do_if,	NULL	},
+  { "IFDEF",	1, do_ifdef,	NULL	},
+  { "IFN",	1, do_ifn,	NULL	},
+  { "IFNDEF",	1, do_ifndef,	NULL	},
   { "INCLUDE",	0, do_include,	NULL	},
   { "ORG",	0, do_org,	NULL	},
   { "PAGE",	0, do_page,	NULL	},
@@ -1006,10 +1040,14 @@ const pseudo_t *
 is_pseudo(const char *name)
 {
     const pseudo_t *ptr;
+    int i;
 
-    for (ptr = pseudos; ptr->name != NULL; ptr++)
-	if (! strcmp(ptr->name, name))
+    for (ptr = pseudos; ptr->name != NULL; ptr++) {
+	if ((i = strcmp(ptr->name, name)) == 0)
 		return ptr;
+	if (i > 0)
+		break;
+    }
 
     return NULL;
 }
