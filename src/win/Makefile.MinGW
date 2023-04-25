@@ -8,7 +8,7 @@
 #
 #		Makefile for Windows systems using the MinGW-w64 environment.
 #
-# Version:	@(#)Makefile.MinGW	1.1.0	2023/04/24
+# Version:	@(#)Makefile.MinGW	1.1.0	2023/04/25
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -59,8 +59,9 @@ VARCEM	:= ../../../..
 
 # Where is our Ihex support library?
 IHEX	:= $(VARCEM)/contrib/Ihex
- INCS	+= -I$(IHEX)/include -DUSE_HEX=2
+ INCS	+= -I$(IHEX)/include -DUSE_IHEX=3
  LDIR	+= -L$(IHEX)/lib/$(ARCH)
+ LDLIBS	+= -lihex_s
 
 
 DEFS	:= -DALLOW_UNDEFINED_IF
