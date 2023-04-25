@@ -1,4 +1,12 @@
 ; C64 Hello World
+
+	.ifdef C64
+	.include "tests/c64_prg.asm"
+	.else
+	.cpu	6502
+	.org	$0400
+	.endif
+
 ; assemble to .PRG file: vasm -o hello.prg c64.asm c64_hello.asm
 
 CHROUT = $FFD2                  ; kernal function address

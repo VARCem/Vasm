@@ -1,5 +1,9 @@
 # Local stuff
 .gitignore
+t.*
+test*.*
+hello.*
+*.cmd
 
 # Prerequisites
 *.d

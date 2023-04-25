@@ -4,8 +4,11 @@ SYS	= $9E			; basic SYS token number
 
 LOAD	= $0801			; load address
 
+	.cpu	6510		; set processor for C64
+
 	.word	LOAD		; .PRG header: load address
-	.org	LOAD
+
+	.org	LOAD		; we start at this address
 
 basic:				; BASIC code: 10 SYS 2062
         .word @end, 10          ; ptr to next basic line and line number 10

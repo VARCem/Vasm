@@ -1,6 +1,6 @@
 Welcome to **VARCem**, the Virtual Archaeological Computer EMulator.
 
-Vasm is a multi-target, table-driven cross assembler, part of the
+**Vasm** is a multi-target, table-driven cross assembler, part of the
 VARCem8 emulator project. It implements a general assembler block
 with the usual (and, some less usual) features, and then uses a
 back-end specific for a given microprocessor to generate code for
@@ -8,13 +8,23 @@ that processor.
 
 HISTORY
 -------
-Vasm has its roots in the [asm6502](https://github.com/boeckmann/asm6502) project.
-
+Vasm has its roots in the [asm6502](https://github.com/boeckmann/asm6502)
+project.  From there on, the code was split up into modules, features
+have been added and existing features have been improved. All this
+did not fit within the design goals of the original project, resulting
+in a fork so both projects can benefit.
 
 LICENSE
 -------
-Vasm is released under the MIT license, the same license as the
-original project (see HISTORY above.)
+VARCem as a whole is released under the BSD 3-Clause Open Software
+License, which is compatible with the GPL (GNU Public License)
+version 2 or later that is used by many of the modules imported
+from other emulator projects. Parts project are released under the
+MIT license.
+
+The author of the original project (see HISTORY above) has authorized
+the VARCem team to re-license its fork of their project to the
+BSD 3-Clause Open Source License.
 
 Author credits and specific copyrights can be found in each of
 the source files.

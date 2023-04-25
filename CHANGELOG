@@ -1,39 +1,22 @@
 + implement full getopt interface
 + full source restructuring, broken up into modules
-+ allow 'X' for .byte
-+ fix .org to auto-fill
-+ add a .end directive
-+ implement .fill
 + fix the symbol table stuff, added 'where' to them
 + add generating hex files for output
 + add << and >> operators in expressions
 + fix the ^ and / operators in expressions
 + fix the ! (NOT) operator, added the ~ alias
-+ support '.', '*' and '$' for "current", not just @
 + added "EQU" in addition to "="
++ allow 'X' for .byte
++ add '.', '*' and '$' for "current pc", not just @
++ fix .org to auto-fill
++ implement ".end" directive
++ implement ".page [plen[,pwidth]" and ".title [str]" directives
++ implement paged listing file
 + implement .binary (and .blob) for binary blob imports
-+ add ".page [plen[,pwidth]" and ".title [str]" directives
-+ add paged listing file
 + add .cpu directive and underlying multi-target support
-- implement .nol option
-- implement .sym option
-- allow [] for expressions, not just ()
-+ implement multiple source files on command line
 + add generating .s19 et al (Motorola) files for output
-
-- Add C02/RC02/WC02/816, 68xx, 80xx et al support.
-  The basic infrastructure for multi-CPU support is in now in place; we can
-  start adding more processors and their (sub-)models in the backend files.
-
-- Filling, ORG and hex files.
-  We currently allow for filling spaces and auto-filling the .org directive
-  for use with straight-binary output files. This is, however, not necessary
-  if we are using hex (IntelHEX) or srec (Motorola SRecord) output files, as
-  those formats "know" that data does not have to be linear. For this to be
-  implemented properly, we will have to re-work the "generating output" code
-  to do it as it goes (in pass 2), and not only at the end of that pass. This
-  allows such "jumping" to be handled by those file formats.
-
++ move the processor-specific errors to the backend.
++ implement multiple source files on command line
 + Reading raw source data.
   We currently perform binary-mode reads on the input source files and all
   included files. Although this works fine on Linux (and, assumedly, on all
@@ -51,3 +34,62 @@
   That said, reading text files in binary mode is not a good practice to
   begin with, so most likely this problem will be fixed by changing the input
   scanner to process all input files in ASCII (text) mode instead. DONE.
++ implement .if/ifdef/ifndef .. .else .. .endif directives
++ implement .def() inside expression handler for use with .if
++ implement ".fill" directive
++ implement ".align" directive
+- implement ".nol option" directive
++ implement ".sym option" directive
++ implement ".radix" directive for default numbering
++ implement ".asciz" directive
++ allow argument to .title to have no quotes
++ implement predefined symbols ("P65C02" etc) for processors
++ allow register A for accu-based (implied) operations
++ re-implement expression comparisons with upstream code
++ re-added the NOT operators, must have deleted those earlier..
++ reworked expression handler to (also) recognize keywords such as
+  NOT, AND, ASR and such, instead of just the ! and & etc chars.
++ added .func() functions as part of the expression handler
++ move .def( special-case from expr.c to new func.c.
++ implement .sum() function
++ allow labels to start with .
+  These are sometimes found in assemblers, either the same way we use
+  @ now, but sometimes also as 'extenders' for the previous global labels.
+
+      foo:      ldx #$00
+      .1        lda .msg, x
+                beq .2
+                jsr $ffd2
+                jmp .1
+      .2        rts
+      .msg:     .asciz "Hello!"
+
+  The above looks the same as when using but '@' local labels, but,
+  not completely. With "dot labels", they (internally) get *added* to
+  the previous global label, so the above would be in the symbol table
+  as 'foo.1', 'foo.2' and 'foo.msg', respectively.
+- implement loginal AND (&&) and OR (||) operators
+- parentheses (precedence levels within an expression) ?
+
+- We now support byte, word and doubleword values. However, are we consistent
+  in checking these types within the symbols, labels and expressions?
+
+- Filling, ORG and hex files.
+  We currently allow for filling spaces and auto-filling the .org directive
+  for use with straight-binary output files. This is, however, not necessary
+  if we are using hex (IntelHEX) or srec (Motorola SRecord) output files, as
+  those formats "know" that data does not have to be linear. For this to be
+  implemented properly, we will have to re-work the "generating output" code
+  to do it as it goes (in pass 2), and not only at the end of that pass. This
+  allows such "jumping" to be handled by those file formats.
+
+- fix the sub-relative include path
+  If one includes a "../foo/bar/bla.inc" file, and then that file also does
+  an include of, say, "xxx.inc", then that file is considered "local" to its
+  parent. So, we should check for that.
+
+- add include search paths using system path and/or -I option?
+
+- Add C02/RC02/WC02/816, 68xx, 80xx et al support.
+  The basic infrastructure for multi-CPU support is now in place; we can
+  start adding more processors and their (sub-)models in the backend files.
