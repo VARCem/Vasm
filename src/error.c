@@ -6,13 +6,15 @@
  *
  *		This file is part of the VARCem Project.
  *
- *		Handle all functions.
+ *		Handle any errors.
  *
- * Version:	@(#)func.c	1.0.3	2023/04/26
+ * Version:	@(#)error.c	1.0.1	2023/04/26
  *
- * Author:	Fred N. van Kempen, <waltje@varcem.com>
+ * Authors:	Fred N. van Kempen, <waltje@varcem.com>
+ *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
  *
  *		Copyright 2023 Fred N. van Kempen.
+ *		Copyright 2022,2023 Bernd B”ckmann.
  *
  *		Redistribution and  use  in source  and binary forms, with
  *		or  without modification, are permitted  provided that the
@@ -45,108 +47,79 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdio.h>
+#if __STDC_VERSION__ >= 201112L
+# include <stdnoreturn.h>
+#else
+# define noreturn /*NORETURN*/
+#endif
 #include <string.h>
-#include <ctype.h>
+#include <setjmp.h>
 #include "global.h"
+#define HAVE_SETJMP_H
 #include "error.h"
 
 
-typedef struct pseudo {
-    const char	*name;
-    value_t	(*func)(char **);
-} func_t;
-
-
-/* Implement the ".def(symbol)" function. */
-static value_t
-do_def(char **p)
-{
-    char id[ID_LEN];
-    value_t res = { 0 };
-    symbol_t *sym;
-
-    ident(p, id);
-    sym = sym_lookup(id, NULL);
-    if (sym == NULL) {
-	/* Forward reference, remember it. */
-	sym = sym_aquire(id, NULL);
-	if (DEFINED(sym->value))
-		error(ERR_REDEF, id);
-
-	/* Set the correct type. */
-	sym->kind = KIND_VAR;
-	sym->value.t = TYPE_BYTE;
-	sym->value.v = 0;
-    }
-    res = sym->value;
-    if (IS_END(**p))
-	error(ERR_EOL, NULL);
-
-    return res;
-}
-
-
-/* Implement the ".sum(startaddr,numbytes)" function. */
-static value_t
-do_sum(char **p)
-{
-    value_t res = { 0 };
-    value_t v1, v2;
-
-    v1 = expr(p);
-
-    skip_white(p);
-    if (IS_END(**p))
-	error(ERR_EOL, NULL);
-
-    if (**p != ',')
-	error(ERR_OPER, NULL);
-    (*p)++;
-
-    v2 = expr(p);
-
-    /*
-     * Calculate the (regular) checksum of the code bytes
-     * between v1 (inclusive) and v2 (exclusive), using a
-     * normal addition.
-     */
-    if (code != NULL) {
-	v2.v += v1.v;
-	while (v1.v < v2.v)
-		res.v += code[v1.v++ - code_base];
-    }
-    SET_DEFINED(res);
-
-    return res;
-}
-
-
-static const func_t functions[] = {
-  { "DEF",	do_def		},
-  { "DEFINED",	do_def		},
-  { "SUM",	do_sum		},
-  { NULL			}
+int		errors;
+jmp_buf		error_jmp;
+char		error_hint[128];
+const char	*err_msgs[ERR_MAXERR] = {
+   "no error",
+   "fatal",
+   "division by zero detected",
+   "processor type not set",
+   "unknown processor type",
+   "out of memory",
+   "assert failed",
+   "unknown directive",
+   "unknown instruction",
+   "value expected",
+   "invalid format specifier",
+   "error in expression",
+   "incomplete operator",
+   "unbalanced parentheses",
+   "identifier expected",
+   "identifier length exceeded",
+   "illegal statement",
+   "end of line expected",
+   "illegal redefinition",
+   "IF nesting too deep",
+   "ELSE without IF",
+   "ENDIF without IF",
+   "symbol already defined as label",
+   "missing closing brace",
+   "undefined value",
+   "illegal type",
+   "string not terminated",
+   "character constant not terminated",
+   "value out of range",
+   "byte value out of range",
+   "word value out of range",
+   "illegal redefinition of local label",
+   "local label definition requires previous global label",
+   "malformed character constant",
+   "string too long",
+   "string expected",
+   "can not open file",
+   "maximum number of include files reached",
+   "file format not enabled"
 };
 
 
-value_t
-function(const char *name, char **p)
+
+
+/* Display error message and abort action. */
+noreturn void
+error(int err, const char *msg)
 {
-    const func_t *ptr;
-    value_t res = { 0 };
-    int i;
+    errors++;
 
-    /* Skip any whitespace. */
-    skip_white(p);
+    if (msg != NULL)
+	strncpy(error_hint, msg, sizeof(error_hint) - 1);
+    else
+	memset(error_hint, 0x00, sizeof(error_hint));
 
-    for (ptr = functions; ptr->name != NULL; ptr++) {
-	if ((i = strcmp(ptr->name, name)) >= 0) {
-		if (i == 0)
-			res = ptr->func(p);
-		break;
-	}
-    }
-
-    return res;
+    longjmp(error_jmp, err);
+    /*NOTREACHED*/
 }

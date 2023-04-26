@@ -16,7 +16,7 @@
  *		for the proper use of the ".org" directive, as this then
  *		merely changes the 'load address' of the following bytes.
  *
- * Version:	@(#)output.c	1.0.3	2023/04/22
+ * Version:	@(#)output.c	1.0.4	2023/04/26
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -65,6 +65,7 @@
 # include <srec.h>
 #endif
 #include "global.h"
+#include "error.h"
 
 
 uint8_t		*code = NULL;		// holds the emitted code

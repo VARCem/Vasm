@@ -8,7 +8,7 @@
  *
  *		Handle directives and pseudo-ops.
  *
- * Version:	@(#)pseudo.c	1.0.3	2023/04/25
+ * Version:	@(#)pseudo.c	1.0.4	2023/04/26
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -48,6 +48,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "global.h"
+#include "error.h"
 
 
 typedef struct pseudo {
@@ -150,6 +151,24 @@ do_asciz(char **p, int pass)
 		next = 1;
 	}
     } while (next);
+
+    return NULL;
+}
+
+
+/* The ".assert <expr>" directive. */
+static char *
+do_assert(char **p, int pass)
+{
+    value_t v;
+
+    skip_white_and_comment(p);
+    if (IS_END(**p))
+	error(ERR_EOL, NULL);
+
+    v = expr(p);
+    if (UNDEFINED(v) || v.v == 0)
+	error(ERR_ASSERT, NULL);
 
     return NULL;
 }
@@ -997,8 +1016,10 @@ do_warn(char **p, int pass)
 
 static const pseudo_t pseudos[] = {
   { "ALIGN",	0, do_align,	NULL	},
+  { "ASCII",	0, do_byte,	NULL	},
   { "ASCIIZ",	0, do_asciz,	NULL	},
   { "ASCIZ",	0, do_asciz,	NULL	},
+  { "ASSERT",	0, do_assert,	NULL	},
   { "BINARY",	0, do_blob,	NULL	},
   { "BLOB",	0, do_blob,	NULL	},
   { "BYTE",	0, do_byte,	NULL	},
@@ -1006,15 +1027,15 @@ static const pseudo_t pseudos[] = {
   { "DATA",	0, do_byte,	NULL	},
   { "DB",	0, do_byte,	NULL	},
   { "DEFINE",	0, do_define,	NULL	},
-  { "DWORD",	0, do_dword,	NULL	},
   { "DL",	0, do_dword,	NULL	},
   { "DW",	0, do_word,	NULL	},
+  { "DWORD",	0, do_dword,	NULL	},
   { "ECHO",	0, do_echo,	NULL	},
   { "ELSE",	1, do_else,	NULL	},
   { "END",	0, do_end,	NULL	},
   { "ENDIF",	1, do_endif,	NULL	},
-  { "ERROR",	0, do_error,	NULL	},
   { "EQU",	0, do_equ,	NULL	},
+  { "ERROR",	0, do_error,	NULL	},
   { "FI",	1, do_endif,	NULL	},
   { "FILL",	0, do_fill,	NULL	},
   { "IF",	1, do_if,	NULL	},
@@ -1026,11 +1047,11 @@ static const pseudo_t pseudos[] = {
   { "PAGE",	0, do_page,	NULL	},
   { "RADIX",	0, do_radix,	NULL	},
   { "RADX",	0, do_radix,	NULL	},
-  { "STRING",	0, do_byte,	NULL	},
   { "STR",	0, do_byte,	NULL	},
-  { "TITLE",	0, do_title,	NULL	},
-  { "SYMS",	0, do_syms,	NULL	},
+  { "STRING",	0, do_byte,	NULL	},
   { "SYM",	0, do_syms,	NULL	},
+  { "SYMS",	0, do_syms,	NULL	},
+  { "TITLE",	0, do_title,	NULL	},
   { "WARN",	0, do_warn,	NULL	},
   { "WORD",	0, do_word,	NULL	},
   { NULL				}

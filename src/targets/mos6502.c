@@ -14,7 +14,7 @@
  *		version produced later. The CMOS version also has variants
  *		from Rockwell and WDC, with even more changes.
  *
- * Version:	@(#)mos6502.c	1.0.4	2023/04/25
+ * Version:	@(#)mos6502.c	1.0.5	2023/04/26
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -47,6 +47,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "../global.h"
+#include "../error.h"
 #include "../target.h"
 
 

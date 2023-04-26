@@ -11,7 +11,7 @@
  *		the "fread" function on text files) to properly read data
  *		from them when opened as a text file.
  *
- * Version:	@(#)input.c	1.0.3	2023/04/11
+ * Version:	@(#)input.c	1.0.4	2023/04/26
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -52,6 +52,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "global.h"
+#include "error.h"
 
 
 /*

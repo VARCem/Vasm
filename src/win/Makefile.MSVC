@@ -8,7 +8,7 @@
 #
 #		Makefile for Windows using Visual Studio 2019.
 #
-# Version:	@(#)Makefile.MSVC	1.1.0	2023/04/24
+# Version:	@(#)Makefile.MSVC	1.1.0	2023/04/26
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -235,8 +235,8 @@ VPATH		:= win . targets
 PROG		:= vasm.exe
 SYSOBJ		:= vasm.res getopt.obj
 OBJ		:= $(SYSOBJ) \
-		   main.obj symbol.obj expr.obj func.obj input.obj output.obj \
-		   list.obj parse.obj pseudo.obj \
+		   main.obj error.obj symbol.obj expr.obj func.obj input.obj \
+		   output.obj list.obj parse.obj pseudo.obj \
 		   target.obj \
 		    mos6502.obj
 LDLIBS		+= #advapi32.lib shell32.lib user32.lib kernel32.lib winmm.lib

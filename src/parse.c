@@ -8,7 +8,7 @@
  *
  *		Parse the source input, process it, and generate output.
  *
- * Version:	@(#)parse.c	1.0.6	2023/04/23
+ * Version:	@(#)parse.c	1.0.7	2023/04/26
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -49,15 +49,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#if __STDC_VERSION__ >= 201112L
-# include <stdnoreturn.h>
-#else
-# define noreturn /*NORETURN*/
-#endif
 #include <string.h>
 #include <ctype.h>
 #include <setjmp.h>
 #include "global.h"
+#define HAVE_SETJMP_H
+#include "error.h"
 #include "target.h"
 
 
@@ -78,51 +75,6 @@ uint16_t oc = 0;			// counter of emitted output bytes
 uint16_t sa = 0;			// start addr for generated code (.end)
 
 
-static int	errors;
-static jmp_buf	error_jmp;
-static char	error_hint[128];
-static const char *err_msg[] = {
-   "no error",
-   "fatal",
-   "division by zero detected",
-   "processor type not set",
-   "unknown processor type",
-   "out of memory",
-   "unknown directive",
-   "unknown instruction",
-   "value expected",
-   "invalid format specifier",
-   "error in expression",
-   "incomplete operator",
-   "unbalanced parentheses",
-   "identifier expected",
-   "identifier length exceeded",
-   "illegal statement",
-   "end of line expected",
-   "illegal redefinition",
-   "IF nesting too deep",
-   "ELSE without IF",
-   "ENDIF without IF",
-   "symbol already defined as label",
-   "missing closing brace",
-   "undefined value",
-   "illegal type",
-   "string not terminated",
-   "character constant not terminated",
-   "value out of range",
-   "byte value out of range",
-   "word value out of range",
-   "illegal redefinition of local label",
-   "local label definition requires previous global label",
-   "malformed character constant",
-   "string too long",
-   "string expected",
-   "can not open file",
-   "maximum number of include files reached",
-   "file format not enabled"
-};
-
-
 #ifdef _DEBUG
 char *
 dumpline(const char *p)
@@ -137,22 +89,6 @@ dumpline(const char *p)
     return(temp);
 }
 #endif
-
-
-/* Display error message and abort action. */
-noreturn void
-error(int err, const char *msg)
-{
-    errors++;
-
-    if (msg != NULL)
-	strncpy(error_hint, msg, sizeof(error_hint) - 1);
-    else
-	memset(error_hint, 0x00, sizeof(error_hint));
-
-    longjmp(error_jmp, err);
-    /*NOTREACHED*/
-}
 
 
 void
@@ -490,7 +426,7 @@ pass(char **p, int pass)
 	}
     } else {
 	if (err < ERR_MAXERR)
-		msg = err_msg[err];
+		msg = err_msgs[err];
 	else
 		msg = trg_error(err);
 

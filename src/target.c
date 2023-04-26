@@ -8,7 +8,7 @@
  *
  *		Handle selection of a target device.
  *
- * Version:	@(#)target.c	1.0.1	2023/04/20
+ * Version:	@(#)target.c	1.0.2	2023/04/26
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -49,6 +49,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "global.h"
+#include "error.h"
 #include "target.h"
 
 

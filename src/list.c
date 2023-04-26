@@ -8,7 +8,7 @@
  *
  *		Handle the listfile output.
  *
- * Version:	@(#)list.c	1.0.3	2023/04/17
+ * Version:	@(#)list.c	1.0.4	2023/04/26
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -259,7 +259,7 @@ list_symbols(void)
 		if (DEFINED(sym->value)) {
 			fprintf(fp, "%5s ", value_print(sym->value));
 			if (IS_VAR(sym))
-				fprintf(fp, "%c", value_type(sym->value.t));
+				fprintf(fp, "%c", value_type(sym->value));
 			else
 				fprintf(fp, " ");
 			fprintf(fp, "        ");

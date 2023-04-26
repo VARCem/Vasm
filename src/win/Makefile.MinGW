@@ -8,7 +8,7 @@
 #
 #		Makefile for Windows systems using the MinGW-w64 environment.
 #
-# Version:	@(#)Makefile.MinGW	1.1.0	2023/04/25
+# Version:	@(#)Makefile.MinGW	1.1.0	2023/04/26
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -218,8 +218,8 @@ VPATH		:= win . targets
 PROG		:= vasm.exe
 SYSOBJ		:= vasm.res getopt.o
 OBJ		:= $(SYSOBJ) \
-		   main.o symbol.o expr.o func.o input.o output.o \
-		   list.o parse.o pseudo.o \
+		   main.o error.o symbol.o expr.o func.o input.o \
+		   output.o list.o parse.o pseudo.o \
 		   target.o \
 		    mos6502.o
 

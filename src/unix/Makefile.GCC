@@ -8,7 +8,7 @@
 #
 #		Makefile for UNIX-like systems using the GCC environment.
 #
-# Version:	@(#)Makefile.GCC	1.1.0	2023/04/25
+# Version:	@(#)Makefile.GCC	1.1.0	2023/04/26
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -59,12 +59,12 @@ VARCEM	:= ../../../..
 
 # Where is our Ihex support library?
 IHEX	:= $(VARCEM)/contrib/Ihex
- INCS	+= -I$(IHEX)/include -DUSE_IHEX=2
+ INCS	+= -I$(IHEX)/include -DUSE_IHEX=3
  LDIR	+= -L$(IHEX)/lib/$(ARCH)/linux
  LDLIBS	+= -lihex #_s
 
 
-DEFS	:= -DUSE_IHEX -DALLOW_UNDEFINED_IF
+DEFS	:= -DALLOW_UNDEFINED_IF
 
 
 #########################################################################
@@ -210,8 +210,8 @@ VPATH		:= unix . targets
 PROG		:= vasm
 SYSOBJ		:=
 OBJ		:= $(SYSOBJ) \
-		   main.o symbol.o expr.o func.o input.o output.o list.o \
-		   parse.o pseudo.o \
+		   main.o error.o symbol.o expr.o func.o input.o \
+		   output.o list.o parse.o pseudo.o \
 		   target.o \
 		    mos6502.o
 

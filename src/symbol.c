@@ -8,7 +8,7 @@
  *
  *		Handle symbols.
  *
- * Version:	@(#)symbol.c	1.0.3	2023/04/22
+ * Version:	@(#)symbol.c	1.0.4	2023/04/26
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -48,6 +48,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "global.h"
+#include "error.h"
 
 
 static symbol_t	*symbols = NULL;	// global symbol table

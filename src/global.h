@@ -8,7 +8,7 @@
  *
  *		Definitions for the entire application.
  *
- * Version:	@(#)global.h	1.0.7	2023/04/25
+ * Version:	@(#)global.h	1.0.8	2023/04/26
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -70,50 +70,6 @@
 #define MAX_FILENAMES	256 + 1		// maximum include files
 #define MAX_IFLEVEL	16		// maximum depth of IF levels
 #define RADIX_DEFAULT	10		// default radix is decimal
-
-
-typedef enum errors_e {
-    ERR_USER = 1,		// user-specified error
-    ERR_ZERO,			// "division by zero"
-    ERR_NOCPU,			// "processor type not set"
-    ERR_CPU,			// "unknown processor type"
-    ERR_MEM,			// "out of memory"
-    ERR_NODIRECTIVE,		// "unknown directive"
-    ERR_INSTR,			// "unknown instruction"
-    ERR_NUM,			// "value expected"
-    ERR_FMT,			// "invalid format specifier"
-    ERR_EXPR,			// "error in expression"
-    ERR_OPER,			// "incomplete operator"
-    ERR_UNBALANCED,		// "unbalanced parentheses"
-    ERR_ID,			// "identifier expected"
-    ERR_IDLEN,			// "identifier length exceeded"
-    ERR_STMT,			// "illegal statement"
-    ERR_EOL,			// "end of line expected"
-    ERR_REDEF,			// "illegal redefinition"
-    ERR_IF,			// "IF nesting too deep"
-    ERR_ELSE,			// "ELSE without IF"
-    ERR_ENDIF,			// "ENDIF without IF"
-    ERR_LBLREDEF,		// "symbol already defined as label"
-    ERR_CLBR,			// "missing closing brace"
-    ERR_UNDEF,			// "undefined value"
-    ERR_ILLTYPE,		// "illegal type"
-    ERR_STREND,			// "string not terminated"
-    ERR_CHREND,			// "character constant not terminated"
-    ERR_RNG,			// "value out of range"
-    ERR_RNG_BYTE,		// "byte value out of range
-    ERR_RNG_WORD,		// "word value out of range
-    ERR_LOCAL_REDEF,		// "illegal redefinition of local label"
-    ERR_NO_GLOBAL,		// "local label definition .. global label"
-    ERR_CHR,			// "malformed character constant"
-    ERR_STRLEN,			// "string too long"
-    ERR_STR,			// "string expected"
-    ERR_OPEN,			// "can not open file"
-    ERR_MAXINC,			// "maximum number of include files reached"
-    ERR_NO_FMT,			// "file format not enabled"
-
-    ERR_MAXERR			// last generic error
-} errors_t;
-
 
 #define ID_LEN		32		// max #characters in identifiers
 #define STR_LEN		128		// max #characters in string literals
@@ -219,7 +175,6 @@ extern int	list_plength,
 extern char	*dumpline(const char *p);
 #endif
 extern int	pass(char **, int);
-extern void	error(int, const char *);
 extern int	is_end(char);
 extern void	skip_eol(char **);
 extern void	skip_white(char **);
@@ -242,7 +197,7 @@ extern void	define_variable(const char *, value_t);
 extern value_t	expr(char **);
 extern value_t	to_byte(value_t, int);
 extern value_t	to_word(value_t, int);
-extern char	value_type(uint8_t);
+extern char	value_type(value_t);
 extern int	value_format(char **);
 extern char	*value_print(value_t);
 extern char	*value_print_format(value_t, int);

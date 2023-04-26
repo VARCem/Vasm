@@ -6,9 +6,9 @@
  *
  *		This file is part of the VARCem Project.
  *
- *		Handle all expressions.
+ *		General expression handler.
  *
- * Version:	@(#)expr.c	1.0.5	2023/04/25
+ * Version:	@(#)expr.c	1.0.6	2023/04/26
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -51,6 +51,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "global.h"
+#include "error.h"
 
 
 #ifndef isxdigit
@@ -71,6 +72,7 @@ starts_with(char *text, char *s)
 }
 
 
+/* Get a single digit. */
 static int
 digit(const char *p)
 {
@@ -83,7 +85,7 @@ digit(const char *p)
 }
 
 
-/* Read a number in some radix. */
+/* Get a number in some radix. */
 static value_t
 number(char **p)
 {
@@ -157,6 +159,26 @@ do_bin:
 }
 
 
+/*
+ * Get a primary operand.
+ *
+ * A primary operand can be any of:
+ *
+ * .funcname(...)	calling a function
+ * .label		a local label
+ * .			the current PC
+ * @label		a local label
+ * @			the current PC
+ * *			the current PC
+ * $			the current PC
+ * 'x'			single character x
+ * ident		a symbol
+ * number		a number, see number() above
+ *
+ * If an operand starts with a (, this starts a new level
+ * of expression, and we make sure it is properly terminated
+ * with a ) here.
+ */
 static value_t
 primary(char **p, int label)
 {
@@ -301,15 +323,17 @@ program_counter:
 
 
 /*
- * For compatibility with other assemblers,
- * we add word-based operators for:
+ * We implement these operators:
  *
- *  %    MOD
- *  &    AND
- *  <<   ASL
- *  >>   ASR
+ * *	multiply
+ * /	divide
+ * %	modulo, also "MOD" keyword
+ * &    bitwise AND, also "AND" keyword
+ * <<   shift left, also "ASL" and "SHL" keywords
+ * >>   shift right, also "ASR" and "SHR" keywords
+ * ?:	undefined-default
  *
- * for completeness.
+ * here.
  */
 static value_t
 product(char **p)
@@ -329,19 +353,20 @@ product(char **p)
     if (starts_with(*p, "MOD ")) { op = '%'; *p += 4; }
     else if (starts_with(*p, "AND ")) { op = '&'; *p += 4; }
     else if (starts_with(*p, "ASL ")) { op = '<'; op2 = '<'; *p += 4; }
-    else if (starts_with(*p, "ASR ")) { op = '>'; op2 = '>'; *p += 4; };
+    else if (starts_with(*p, "SHL ")) { op = '<'; op2 = '<'; *p += 4; }
+    else if (starts_with(*p, "ASR ")) { op = '>'; op2 = '>'; *p += 4; }
+    else if (starts_with(*p, "SHR ")) { op = '>'; op2 = '>'; *p += 4; };
 
-    while ((op == '*') || (op == '&') || (op == '/') || (op == '%') ||
+    while ((op == '*') || (op == '%') || (op == '/') ||
+	   (op == '&' && op2 != '&') ||
 	   (op == '<' && op2 == '<') || (op == '>' && op2 == '>') ||
-	   (op == '|' && op2 == '|') || (op == '&' && op2 == '&') ||
 	   (op == '?' && op2 == ':')) {
 
 	/* Skip operator. */
 	(*p)++;
 
 	/* For double-character operators, skip the second character. */
-	if ((op == '<' || op == '>' || op == '|') ||
-	    (op == '&' && op2 == '&') || (op == '?' && op2 == ':'))
+	if (op == '<' || op == '>' || (op == '?' && op2 == ':'))
 		(*p)++;
 
 	n2 = primary(p, 1);
@@ -363,25 +388,15 @@ product(char **p)
 			res.v = (uint16_t)(res.v % n2.v);
 			break;
 
-		case '&':	// AND
-			if (op2 == op)		// logical AND
-				res.v = !!res.v && !!n2.v;
-			else			// bitwise AND
-				res.v = (uint16_t)(res.v & n2.v);
+		case '&':	// bitwise AND
+			res.v = (uint16_t)(res.v & n2.v);
 			break;
 
-		case '|':	// OR
-			if (op2 == op)		// logical OR
-				res.v = !!res.v || !!n2.v;
-			else			// bitwise OR
-				res.v = (uint16_t)(res.v | n2.v);
-			break;
-
-		case '<':	// bitwise shift LEFT
+		case '<':	// shift left
 			res.v = res.v << n2.v;
 			break;
 
-		case '>':	// bitwise shift RIGHT
+		case '>':	// shift right
 			res.v = res.v >> n2.v;
 			break;
 
@@ -404,19 +419,20 @@ product(char **p)
 
 
 /*
- * For compatibility with other assemblers,
- * we add word-based operators for:
+ * We implement these operators:
  *
- *  |    OR
- *  ^    XOR (and/or EOR)
+ * -	subtract
+ * +	add
+ * |	bitwise OR, also "OR" keyword
+ * ^	bitwise XOR, also "XOR" and "EOR" keywords
  *
- * for completeness.
+ * here.
  */
 static value_t
 term(char **p)
 {
     value_t n2, res;
-    char op;
+    char op, op2;
 
     skip_white(p);
 
@@ -439,12 +455,14 @@ term(char **p)
 
     skip_white(p);
 
-    op = **p;
-    if (starts_with(*p, "OR ")) { op = '|'; *p += 3; }
+    op = **p; op2 = *(*p + 1);
+    if (starts_with(*p, "OR ")) { op = '|'; op2 = ' '; *p += 3; }
     else if (starts_with(*p, "XOR ")) { op = '^'; *p += 4; }
     else if (starts_with(*p, "EOR ")) { op = '^'; *p += 4; };
 
-    while ((op == '+') || (op == '-') || (op == '|') || (op == '^')) {
+    while ((op == '+') || (op == '-') || (op == '^') ||
+	   (op == '|' && op2 != '|')) {
+
 	/* Skip operator. */
 	(*p)++;
 
@@ -473,12 +491,27 @@ term(char **p)
 	skip_white(p);
 
 	op = **p;
+	op2 = *((*p)+1);
     }
 
     return res;
 }
 
 
+/*
+ * We implement these logical operators:
+ *
+ * ==	EQUAL
+ * !=	NOT EQUAL
+ * <	LESS
+ * <=	LESS_EQUAL
+ * >	GREATER
+ * >=	GREATER_EQUAL
+ * ||	OR
+ * &&	AND
+ *
+ * here.
+ */
 static value_t
 compare(char **p)
 {
@@ -496,38 +529,54 @@ compare(char **p)
     op = **p; op2 = *(*p + 1);
     while ((op == '<') || (op == '>') ||
 	   (op == '=' && op2 == '=') || (op == '!' && op2 == '=') ||
-	   (op == '<' && op2 == '=') || (op == '>' && op2 == '=')) {
+	   (op == '<' && op2 == '=') || (op == '>' && op2 == '=') ||
+	   (op == '|' && op2 == '|') || (op == '&' && op2 == '&')) {
 
 	/* Skip operator. */
 	(*p)++;
 
 	/* For double-character operators, skip the second character. */
 	if ((op == '=') || (op == '!') ||
-	    (op == '<' && op2 == '=') || (op == '>' && op2 == '='))
+	    (op == '<' && op2 == '=') || (op == '>' && op2 == '=') ||
+	    (op == '|' && op2 == '|') || (op == '&' && op2 == '&'))
 		(*p)++;
 
-	n2 = term(p);
 	switch (op) {
-		case '=':
+		case '=':	// equal
+			n2 = term(p);
 			res.v = res.v == n2.v;
 			break;
 
-		case '!':
+		case '!':	// not equal
+			n2 = term(p);
 			res.v = res.v != n2.v;
 			break;
 
-		case '<':
+		case '<':	// lesser (or equal)
+			n2 = term(p);
 			res.v = (op2 == '=') ? res.v <= n2.v : res.v < n2.v;
 			break;
 
-		case '>':
+		case '>':	// greater (or equal)
+			n2 = term(p);
 			res.v = (op2 == '=') ? res.v >= n2.v : res.v > n2.v;
+			break;
+
+		case '|':	// logical OR
+			n2 = expr(p);
+			res.v = res.v || n2.v;
+			break;
+
+		case '&':	// logical AND
+			n2 = expr(p);
+			res.v = res.v && n2.v;
 			break;
 	}
 
+	/* Since we are dealing with logical operators.. */
+	res.v = !!res.v;
+
 	INFER_DEFINED(res, n2);
-	if (DEFINED(res) && res.v)
-		res.v = 1;
 	SET_TYPE(res, TYPE_BYTE);
 
 	skip_white(p);
@@ -540,14 +589,49 @@ compare(char **p)
 }
 
 
+/* Take a value and try to convert it to a byte value. */
+value_t
+to_byte(value_t v, int force)
+{
+    if (force) {
+	v.v &= 0xff;
+    } else if (DEFINED(v) && (v.v > 0xff))
+	error(ERR_RNG_BYTE, NULL);
+
+    SET_TYPE(v, TYPE_BYTE);
+
+    return v;
+}
+
+
+/* Take a value and try to convert it to a word value. */
+value_t
+to_word(value_t v, int force)
+{
+    if (force) {
+	v.v &= 0xffff;
+    } else if (DEFINED(v) && (v.v > 0xffff))
+	error(ERR_RNG_WORD, NULL);
+
+    SET_TYPE(v, TYPE_WORD);
+
+    return v;
+}
+
+
 /*
- * For compatibility with other assemblers,
- * we add word-based operators for:
+ * We implement these operators:
  *
- *  !    NOT (logical)
- *  ~    NOT (bit-wise)
+ * <	LSB (take low byte of operand)
+ * >	MSB (take high byte of operand)
+ * !	NOT (logical) (also "NOT" keyword)
+ * ~	NOT (bit-wise)
+ * [b]	BYTE (convert operand to byte if possible)
+ * [!b]	BYTECAST (cast operand to byte)
+ * [w]	WORD (convert operand to word if possible)
+ * [!w]	WORDCAST (cast operand to word)
  *
- * for completeness.
+ * here.
  */
 value_t
 expr(char **p)
@@ -595,8 +679,11 @@ expr(char **p)
     } else if (starts_with(*p, "[!b]")) {
 	/* Forced conversion to byte. */
 	*p += 4;
-//	v = to_byte(compare(p), 1);		// convert entire expression
-	v = to_byte(expr(p), 1);
+#if 1
+	v = to_byte(expr(p), 1);		// convert entire expression
+#else
+	v = to_byte(compare(p), 1);
+#endif
     } else if (starts_with(*p, "[d]")) {
 	/* Lossless conversion to doubleword. */
 	*p += 3;
@@ -609,8 +696,11 @@ expr(char **p)
     } else if (starts_with(*p, "[!w]")) {
 	/* Forced conversion to word. */
 	*p += 4;
-//	v = to_word(expr(p), 1);		// convert entire expression
+#if 1
+	v = to_word(expr(p), 1);		// convert entire expression
+#else
 	v = to_word(compare(p), 1);
+#endif
     } else {
 	/* Iterate. */
 	v = compare(p);
@@ -620,40 +710,11 @@ expr(char **p)
 }
 
 
-/* Take a value and try to convert it to a byte value. */
-value_t
-to_byte(value_t v, int force)
-{
-    if (force) {
-	v.v &= 0xff;
-    } else if (DEFINED(v) && (v.v > 0xff))
-	error(ERR_RNG_BYTE, NULL);
-
-    SET_TYPE(v, TYPE_BYTE);
-
-    return v;
-}
-
-
-/* Take a value and try to convert it to a word value. */
-value_t
-to_word(value_t v, int force)
-{
-    if (force) {
-	v.v &= 0xffff;
-    } else if (DEFINED(v) && (v.v > 0xffff))
-	error(ERR_RNG_WORD, NULL);
-
-    SET_TYPE(v, TYPE_WORD);
-
-    return v;
-}
-
-
+/* Return the type of a value. */
 char
-value_type(uint8_t type)
+value_type(value_t v)
 {
-    switch (type & TYPE_MASK) {
+    switch (v.t & TYPE_MASK) {
 	case TYPE_BYTE:
 		return 'B';
 

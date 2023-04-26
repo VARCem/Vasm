@@ -68,8 +68,12 @@
   not completely. With "dot labels", they (internally) get *added* to
   the previous global label, so the above would be in the symbol table
   as 'foo.1', 'foo.2' and 'foo.msg', respectively.
-- implement loginal AND (&&) and OR (||) operators
-- parentheses (precedence levels within an expression) ?
++ Implement the .ifn directive.
++ Implement the [!b] and [!w] (forced cast) modifiers.
++ Implement the ?: operator for providing a default in case of undef variable.
++ implement loginal AND (&&) and OR (||) operators
++ parentheses (precedence levels within an expression) ?
++ documented code in expr.c to clarify operators
 
 - We now support byte, word and doubleword values. However, are we consistent
   in checking these types within the symbols, labels and expressions?
