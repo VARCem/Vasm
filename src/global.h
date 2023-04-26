@@ -8,7 +8,7 @@
  *
  *		Definitions for the entire application.
  *
- * Version:	@(#)global.h	1.0.6	2023/04/23
+ * Version:	@(#)global.h	1.0.7	2023/04/25
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -240,8 +240,8 @@ extern symbol_t	*define_label(const char *, uint16_t, symbol_t *);
 extern void	define_variable(const char *, value_t);
 
 extern value_t	expr(char **);
-extern value_t	to_byte(value_t);
-extern value_t	to_word(value_t);
+extern value_t	to_byte(value_t, int);
+extern value_t	to_word(value_t, int);
 extern char	value_type(uint8_t);
 extern int	value_format(char **);
 extern char	*value_print(value_t);

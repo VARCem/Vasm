@@ -544,8 +544,8 @@ compare(char **p)
  * For compatibility with other assemblers,
  * we add word-based operators for:
  *
- *  !    NOT
- *  ~    NOT
+ *  !    NOT (logical)
+ *  ~    NOT (bit-wise)
  *
  * for completeness.
  */
@@ -563,11 +563,6 @@ expr(char **p)
 #endif
 
     op = **p;
-    if (starts_with(*p, "NOT ")) {
-	op = '~';
-	*p += 4;
-    };
-
     if (op == '>') {
 	/* High-byte (MSB) operator. */
 	(*p)++;
@@ -580,19 +575,28 @@ expr(char **p)
 	v = compare(p);
 	v.v = v.v & 0xff;
 	SET_TYPE(v, TYPE_BYTE);
-    } else if ((op == '!') || (op == '~')) {
-	/* NOT operators. */
+    } else if ((op == '!') || starts_with(*p, "NOT ")) {
+	/* Logical NOT operators. */
+	if (op == '!')
+		(*p)++;
+	else
+		*p += 4;
+	v = term(p);
+	v.v = !v.v;
+    } else if (op == '~') {
+	/* Bitwise NOT (complement) operator. */
 	(*p)++;
 	v = term(p);
 	v.v = ~v.v;
-	SET_TYPE(v, TYPE_WORD);
     } else if (starts_with(*p, "[b]")) {
 	/* Lossless conversion to byte. */
 	*p += 3;
-	v = compare(p);
-	if (DEFINED(v) && v.v > 0xff)
-		error(ERR_RNG_BYTE, NULL);
-	SET_TYPE(v, TYPE_BYTE);
+	v = to_byte(compare(p), 0);
+    } else if (starts_with(*p, "[!b]")) {
+	/* Forced conversion to byte. */
+	*p += 4;
+//	v = to_byte(compare(p), 1);		// convert entire expression
+	v = to_byte(expr(p), 1);
     } else if (starts_with(*p, "[d]")) {
 	/* Lossless conversion to doubleword. */
 	*p += 3;
@@ -601,10 +605,12 @@ expr(char **p)
     } else if (starts_with(*p, "[w]")) {
 	/* Lossless conversion to word. */
 	*p += 3;
-	v = compare(p);
-	if (DEFINED(v) && v.v > 0xffff)
-		error(ERR_RNG_WORD, NULL);
-	SET_TYPE(v, TYPE_WORD);
+	v = to_word(compare(p), 0);
+    } else if (starts_with(*p, "[!w]")) {
+	/* Forced conversion to word. */
+	*p += 4;
+//	v = to_word(expr(p), 1);		// convert entire expression
+	v = to_word(compare(p), 1);
     } else {
 	/* Iterate. */
 	v = compare(p);
@@ -616,9 +622,11 @@ expr(char **p)
 
 /* Take a value and try to convert it to a byte value. */
 value_t
-to_byte(value_t v)
+to_byte(value_t v, int force)
 {
-    if (DEFINED(v) && (v.v > 0xff))
+    if (force) {
+	v.v &= 0xff;
+    } else if (DEFINED(v) && (v.v > 0xff))
 	error(ERR_RNG_BYTE, NULL);
 
     SET_TYPE(v, TYPE_BYTE);
@@ -629,9 +637,11 @@ to_byte(value_t v)
 
 /* Take a value and try to convert it to a word value. */
 value_t
-to_word(value_t v)
+to_word(value_t v, int force)
 {
-    if (DEFINED(v) && (v.v > 0xffff))
+    if (force) {
+	v.v &= 0xffff;
+    } else if (DEFINED(v) && (v.v > 0xffff))
 	error(ERR_RNG_WORD, NULL);
 
     SET_TYPE(v, TYPE_WORD);

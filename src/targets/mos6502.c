@@ -430,7 +430,7 @@ op_imm(char **p, int pass, const opcode_t *instr)
 	if (UNDEFINED(v)) error(ERR_UNDEF, NULL);
 
     emit_byte(instr->opc[am], pass);
-    emit_byte((uint8_t)to_byte(v).v, pass);
+    emit_byte((uint8_t)to_byte(v, 0).v, pass);
 
     return am;
 }
@@ -522,7 +522,7 @@ op_ind(char **p, int pass, const opcode_t *instr)
     if (am == AM_IND)
 	emit_word(v.v, pass);
     else
-	emit_byte((uint8_t)to_byte(v).v, pass);
+	emit_byte((uint8_t)to_byte(v, 0).v, pass);
 
     return am;
 }
@@ -564,7 +564,7 @@ op_abxy_zpxy(char **p, int pass, const opcode_t *instr, value_t v)
 
     emit_byte(instr->opc[am], pass);
     if ((am == AM_ZPX) || (am == AM_ZPY))
-	emit_byte((uint8_t)to_byte(v).v, pass);
+	emit_byte((uint8_t)to_byte(v, 0).v, pass);
     else
 	emit_word(v.v, pass);
 
@@ -586,7 +586,7 @@ op_abs_zp(int pass, const opcode_t *instr, value_t v)
 	}
 
 	emit_byte(instr->opc[am], pass);
-	emit_byte((uint8_t)to_byte(v).v, pass);
+	emit_byte((uint8_t)to_byte(v, 0).v, pass);
     } else if (AM_VALID(instr, AM_ABS)) {
 	am = AM_ABS;
 

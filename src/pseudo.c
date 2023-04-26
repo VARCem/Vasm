@@ -264,7 +264,7 @@ do_byte(char **p, int pass)
 			if ((TYPE(v) != TYPE_BYTE) && (v.v > 0xff))
 				error(ERR_ILLTYPE, NULL);
 		}
-		emit_byte((uint8_t)to_byte(v).v, pass);
+		emit_byte((uint8_t)to_byte(v, 0).v, pass);
 
 		pc++;
 	}
