@@ -8,7 +8,7 @@
  *
  *		Handle selection of a target device.
  *
- * Version:	@(#)target.c	1.0.2	2023/04/26
+ * Version:	@(#)target.c	1.0.3	2023/05/13
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -59,6 +59,17 @@ extern const target_t	t_6502_old,
 			t_csg8500,
 			t_65c02;
 
+extern const target_t	t_6800;
+extern const target_t	t_6805;
+extern const target_t	t_6809;
+extern const target_t	t_6811;
+
+extern const target_t	t_1802;
+
+extern const target_t	t_2650,
+			t_2650a,
+			t_2650b;
+
 
 static const target_t *targets[] = {
     &t_6502_old,		// original MOS6502 (NMOS)
@@ -67,6 +78,32 @@ static const target_t *targets[] = {
     &t_csg8500,			// CSG 8500 (NMOS)
 
     &t_65c02,			// standard MOS65C02 (CMOS)
+
+#ifdef USE_MC6800
+    &t_6800,			// MC6800/01/02
+#endif
+
+#ifdef USE_MC6805
+    &t_6805,			// MC68(HC)05
+#endif
+
+#ifdef USE_MC6809
+    &t_6809,			// MC6809
+#endif
+
+#ifdef USE_MC6811
+    &t_6811,			// MC68(HC)11
+#endif
+
+#ifdef USE_CDP1802
+    &t_1802,			// CDP1802
+#endif
+
+#ifdef USE_SCN2650
+    &t_2650,			// SCN2650
+    &t_2650a,			// SCN2650A
+    &t_2650b,			// SCN2650B
+#endif
 
     NULL
 };
@@ -125,7 +162,7 @@ trg_symbol(const char *name)
     SET_DEFINED(v);
     SET_TYPE(v, TYPE_BYTE);
 
-    define_variable(id, v);
+    define_variable(id, v, 0);
 }
 
 
@@ -174,8 +211,10 @@ trg_instr(char **p, int pass)
 int
 trg_instr_ok(const char *p)
 {
-    if (target == NULL)
-	error(ERR_NOCPU, NULL);
+    int ret = 0;
 
-    return target->instr_ok(target, p);
+    if (target != NULL)
+	ret = target->instr_ok(target, p);
+
+    return ret;
 }

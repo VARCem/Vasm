@@ -8,7 +8,7 @@
  *
  *		Define the error codes.
  *
- * Version:	@(#)error.h	1.0.1	2023/04/26
+ * Version:	@(#)error.h	1.0.2	2023/05/13
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -62,6 +62,7 @@ typedef enum errors_e {
     ERR_EXPR,			// "error in expression"
     ERR_OPER,			// "incomplete operator"
     ERR_UNBALANCED,		// "unbalanced parentheses"
+    ERR_LABEL,			// "label required"
     ERR_ID,			// "identifier expected"
     ERR_IDLEN,			// "identifier length exceeded"
     ERR_STMT,			// "illegal statement"
@@ -70,6 +71,9 @@ typedef enum errors_e {
     ERR_IF,			// "IF nesting too deep"
     ERR_ELSE,			// "ELSE without IF"
     ERR_ENDIF,			// "ENDIF without IF"
+    ERR_MAX_REP,		// "too many REPEAT levels"
+    ERR_REPEAT,			// "ENDREP without REPEAT"
+    ERR_ENDREP,			// "REPEAT without ENDREP"
     ERR_LBLREDEF,		// "symbol already defined as label"
     ERR_CLBR,			// "missing closing brace"
     ERR_UNDEF,			// "undefined value"

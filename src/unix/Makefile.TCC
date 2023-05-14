@@ -6,9 +6,9 @@
 #
 #		This file is part of the VARCem Project.
 #
-#		Makefile for UNIX-like systems using the GCC environment.
+#		Makefile for Windows systems using the TCC environment.
 #
-# Version:	@(#)Makefile.GCC	1.1.0	2023/05/13
+# Version:	@(#)Makefile.TCC	1.1.0	2023/05/13
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -60,8 +60,8 @@ VARCEM	:= ../../../..
 # Where is our Ihex support library?
 IHEX	:= $(VARCEM)/contrib/Ihex
  INCS	+= -I$(IHEX)/include -DUSE_IHEX=3
- LDIR	+= -L$(IHEX)/lib/$(ARCH)/linux
- LDLIBS	+= -lihex #_s
+ LDIR	+= -L$(IHEX)/lib/$(ARCH)
+ LDLIBS	+= -lihex-tcc_s
 
 
 DEFS	:= -DALLOW_UNDEFINED_IF
@@ -128,20 +128,8 @@ endif
 #		Nothing should need changing from here on..		#
 #########################################################################
 
-# Import the various platform/architecture names.
-ifdef MAKEFILE_LIST
-#TOPDIR		:= $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
- TOPDIR		:= /project/VARCem/src/build
- TOPFILE	:= $(abspath $(firstword $(MAKEFILE_LIST)))
-else
- TOPDIR		:= ./build
- TOPFILE	:= Makefile.GCC
-endif
-include		$(TOPDIR)/OSDetect.mk
-include		$(TOPDIR)/archs.mk
-
 # Definitions for this enivonment.
-DEVENV		:= gcc
+DEVENV		:= tcc
 DEPS		= -MMD -MF $*.d
 DEPFILE		:= .depends-$(DEVENV)
 
@@ -162,7 +150,7 @@ endif
 
 # Compilation for X64.
 ifeq ($(ARCH), x64)
- TARGET		:= 64
+ TARGET		:= 64 -D__GNUC__
  PREFIX		:=
  RCTARGET	:= pe-x86-64
 
@@ -173,36 +161,49 @@ endif
 
 # Compilation for ARM.
 ifeq ($(ARCH), armv7)
- error Target ARM7 not supported yet !
+ error Target ARM7 not supported for Windows !
 endif
 
 # Compilation for ARM64.
 ifeq ($(ARCH), aarch64)
- error Target ARM64 not supported yet !
+ error Target ARM64 not supported for Windows !
 endif
 
 
 # The various toolchain programs.
-CC		:= gcc -m$(TARGET)
-CXX		:= g++ -m$(TARGET)
+CC		:= tcc -m$(TARGET)
+CXX		:= tcc -m$(TARGET)
 CPP		:= cpp -P
-LINK		:= gcc -m$(TARGET)
-AR		:= ar
-RANLIB		:= ranlib
-STRIP		:= strip
+LINK		:= tcc -m$(TARGET)
+WINDRES		:= windres
+AR		:= tcc-ar
+RANLIB		:= echo
+STRIP		:= echo
 ifndef CAT
  CAT		:= cat
 endif
 
 # Set up the correct toolchain flags.
 OPTS		:= -DARCH=$(ARCH) \
-		   -D_CRT_NON_CONFORMING_SWPRINTFS
+		   -D_CRT_NON_CONFORMING_SWPRINTFS \
+		   -D__USE_MINGW_ANSI_STDIO_X
+ifndef VCRUNTIME
+ # MinGW does not provide MD/MT yet.
+ VCRUNTIME	:= MD
+endif
+RCOPTS		:= --input-format=rc -O coff
+ifdef RCTARGET
+ RCOPTS		+= --target=$(RCTARGET)
+endif
+RCOPTS		+= -D RC_INVOKED -o
 AOPTS		:= r
-LOPTS		:=
+LOPTS		:= -mconsole
 
 # General build options.
 ifeq ($(DEBUG), y)
+ VCRUNTIME	:= $(VCRUNTIME)d
  DFLAGS		+= -ggdb -D_DEBUG
+ RCOPTS		:= -D_DEBUG $(RCOPTS)
  AOPTIM		:=
  ifndef COPTIM
   COPTIM	:= -Og
@@ -219,26 +220,25 @@ else
   endif
  endif
 endif
-OPTS		+=
+OPTS		+= #/$(VCRUNTIME)
 ifeq ($(PROFILER), y)
  LOPTS		+= -Xlinker -Map=$(PROG).map
 endif
 
 
-# Final fixups.
-INCS		+= -Iunix
-
 # Final versions of the toolchain flags.
-CFLAGS		= $(WX_FLAGS) $(OPTS) $(DFLAGS) $(COPTIM) $(AOPTIM) \
-		  $(AFLAGS) $(INCS) $(DEFS) -mstackrealign \
+CFLAGS		= $(OPTS) $(DFLAGS) $(COPTIM) $(AOPTIM) \
+		  $(AFLAGS) $(INCS) $(DEFS) \
+		  -mstackrealign \
 		  -fomit-frame-pointer -fno-strict-aliasing \
 		  -Wall -Wundef #-Wmissing-declarations
 LDFLAGS		:= $(LOPTS) $(DFLAGS) $(LDIR)
 ARFLAGS		:= $(AOPTS)
+RCFLAGS		= $(RCOPTS)
 
 
 # Build module rules.
-.SUFFIXES:	.c .cpp .o
+.SUFFIXES:	.c .cpp .o .rc .res
 
 ifeq ($(AUTODEP), y)
 %.o:		%.c
@@ -254,15 +254,20 @@ else
 		@$(CC) $(CFLAGS) $(DEPS) -E $< >NUL
 endif
 
+# For systems that use these, compile a resource file.
+.rc.res:	$<
+		@echo Processing $<
+		@$(WINDRES) $(RCFLAGS) $@ $<
+
 
 #########################################################################
 #		Nothing should need changing from here on..		#
 #########################################################################
 
-VPATH		:= unix . targets
+# Final fixups.
+INCS		+= -Iunix
 
-#LIBS		:=
-#LOBJ		:=
+VPATH		:= unix targets .
 
 PROG		:= vasm
 SYSOBJ		:=
@@ -273,34 +278,21 @@ OBJ		:= $(SYSOBJ) \
 		    $(TARGETS)
 
 
-all:		$(LIBS) $(PROG)
+all:		$(PROG)
 
 
-libfoo.dll.a libfoo.so:	$(LOBJ)
-		@echo Linking shared library $@ ..
-		@$(LINK) $(LDFLAGS) -shared -o $@ \
-			$(LOBJ)
-		$(if $(filter $(DEBUG),y),,@$(STRIP) --strip-unneeded $@)
-
-libfoo.a:	$(LOBJ)
-		@echo Creating static library $@ ..
-		@$(AR) $(ARFLAGS) $@ $(LOBJ)
-		@$(RANLIB) $@
-
-vasm:		$(OBJ)
+vasm:		$(SYSOBJ) $(OBJ)
 		@echo Linking $@ ..
 		@$(LINK) $(LDFLAGS) -o $@ $(OBJ) $(LIBS) $(LDLIBS)
 		$(if $(filter $(DEBUG),y),,@$(STRIP) $@)
 
-test:		tests/hello.asm
-		@echo Assembling hello.asm ..
-		@asm6502 -v -o hello $<
 
 clean:
 		@echo Cleaning objects..
 		@-rm -f *.o
 		@-rm -f *.d
 		@echo Cleaning resources..
+		@-rm -f *.res
 
 
 clobber:	clean
@@ -309,10 +301,10 @@ clobber:	clean
 		@echo Cleaning libraries..
 		@-rm -f *.so
 		@-rm -f *.a
-#		@-rm -f $(DEPFILE)
+#		@-rm -f $(DEPFILE) 2>NUL
 
 depclean:
-		@-del $(DEPFILE)
+		@-rm -f $(DEPFILE)
 		@echo Creating dependencies..
 		@echo # Run "make depends" to re-create this file. >$(DEPFILE)
 
@@ -334,4 +326,4 @@ else
 endif
 
 
-# End of Makefile.GCC.
+# End of Makefile.TCC.

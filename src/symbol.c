@@ -8,7 +8,7 @@
  *
  *		Handle symbols.
  *
- * Version:	@(#)symbol.c	1.0.4	2023/04/26
+ * Version:	@(#)symbol.c	1.0.5	2023/05/12
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -168,7 +168,7 @@ sym_aquire(const char *name, symbol_t **table)
 
 
 symbol_t *
-define_label(const char *id, uint16_t v, symbol_t *parent)
+define_label(const char *id, uint16_t v, symbol_t *parent, int force)
 {
     char nid[ID_LEN];
     symbol_t *sym;
@@ -190,8 +190,10 @@ define_label(const char *id, uint16_t v, symbol_t *parent)
     } else
 	sym = sym_aquire(id, NULL);
 
-    if (IS_VAR(sym) || (DEFINED(sym->value) && (sym->value.v != v)))
-	error(parent ? ERR_LOCAL_REDEF : ERR_REDEF, id);
+    if (! force) {
+	if (IS_VAR(sym) || (DEFINED(sym->value) && (sym->value.v != v)))
+		error(parent ? ERR_LOCAL_REDEF : ERR_REDEF, id);
+    }
 
     sym->kind = KIND_LBL;
     sym->filenr = filenames_idx;
@@ -205,12 +207,12 @@ define_label(const char *id, uint16_t v, symbol_t *parent)
 
 
 void
-define_variable(const char *id, value_t v)
+define_variable(const char *id, value_t v, int force)
 {
     symbol_t *sym;
 
     sym = sym_aquire(id, NULL);
-    if (DEFINED(sym->value) && (sym->value.v != v.v))
+    if (!force && DEFINED(sym->value) && (sym->value.v != v.v))
 	error(ERR_REDEF, id);
 
     sym->kind = KIND_VAR;
@@ -219,7 +221,7 @@ define_variable(const char *id, value_t v)
 
     /* if the type is already set do not change it */
     sym->value.v = v.v;
-    if (TYPE(sym->value)) {
+    if (!force && TYPE(sym->value)) {
 #if 0
 	if (NUM_TYPE(v.v) > TYPE(sym->value)) error(ERR_REDEF, id);
 #endif
@@ -228,9 +230,12 @@ define_variable(const char *id, value_t v)
     } else
 	sym->value.t = v.t;
 
+#if 0
+//FIXME: we were set to KIND_VAR above..?
     /* If previously defined as label make it word sized. */
     if (IS_LBL(sym))
 	SET_TYPE(sym->value, TYPE_WORD);
+#endif
 }
 
 

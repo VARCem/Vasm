@@ -8,7 +8,7 @@
  *
  *		Handle directives and pseudo-ops.
  *
- * Version:	@(#)pseudo.c	1.0.4	2023/04/26
+ * Version:	@(#)pseudo.c	1.0.5	2023/05/12
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -47,6 +47,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include "global.h"
 #include "error.h"
 
@@ -54,6 +55,7 @@
 typedef struct pseudo {
     const char	*name;
     int		always;
+    int		dotted;
     char	*(*func)(char **, int);
     void	*lister;
 } pseudo_t;
@@ -345,7 +347,7 @@ nodata:
 	SET_TYPE(v, TYPE_BYTE);
     }
 
-    define_variable(id, v);
+    define_variable(id, v, 0);
 
     return NULL;
 }
@@ -464,6 +466,19 @@ do_end(char **p, int pass)
 	sa = v.v;
     }
 
+    /*
+     * Historically, this was to signal an assembler to stop parsing
+     * input and just read until end of tape (so the tape reel or card
+     * deck could be removed.) We do similar, we just "eat" any more
+     * input until we hit the end of this "file".
+     */
+    do {
+	if (**p)
+		(*p)++;
+    } while (**p && **p != EOF_CHAR);
+
+    found_end = 1;
+
     return NULL;
 }
 
@@ -481,6 +496,27 @@ do_endif(char **p, int pass)
 	ifstate = ifstack[iflevel];
     } else
 	error(ERR_ENDIF, NULL);
+
+    return NULL;
+}
+
+
+/* Perform the ".endrep" directive. */
+static char *
+do_endrep(char **p, int pass)
+{
+    if (rptlevel == 0 || rptstack[rptlevel - 1].file != filenames_idx)
+	error(ERR_REPEAT, NULL);
+
+    if (rptstack[rptlevel - 1].count > 1) {
+	*p = rptstack[rptlevel - 1].pos;
+	line = rptstack[rptlevel - 1].line;
+	rptstack[rptlevel - 1].count--;
+    } else
+	rptlevel--;
+
+    rptstate = 0;
+    newrptstate = (rptstack[rptlevel - 1].count > 0);
 
     return NULL;
 }
@@ -506,14 +542,15 @@ do_error(char **p, int pass)
 static char *
 do_equ(char **p, int pass)
 {
-    char id[ID_LEN];
     value_t v;
 
-    ident(p, id);
+    if (current_label == NULL)
+	error(ERR_LABEL, NULL);
 
     v = expr(p);
 
-    define_variable(id, v);
+    /* (Re-)define this label as a variable. */
+    define_variable(current_label->name, v, 1);
 
     return NULL;
 }
@@ -846,7 +883,7 @@ do_page(char **p, int pass)
     skip_white_and_comment(p);
     if (IS_END(**p)) {
 	/* This was just a .page to start a new page. */
-	list_page(NULL);
+	list_page(NULL, NULL);
 	return NULL;
     }
 
@@ -922,6 +959,57 @@ do_radix(char **p, int pass)
 }
 
 
+/* Perform the ".repeat expr" directive. */
+static char *
+do_repeat(char **p, int pass)
+{
+    value_t v;
+    char *pt;
+
+    if (rptlevel == MAX_RPTLEVEL)
+	error(ERR_MAX_REP, NULL);
+
+    skip_white(p);
+    v = expr(p);
+    if ((pass == 2) && UNDEFINED(v))
+		error(ERR_UNDEF, NULL);
+
+    /* Find next line to continue by .ENDREP. */
+    pt = *p;
+    skip_white_and_comment(p);
+
+    rptstack[rptlevel].count = v.v;
+    rptstack[rptlevel].line = line + 1;
+    rptstack[rptlevel].pos = *p;
+    rptstack[rptlevel].file = filenames_idx;
+    rptlevel++;
+
+    newrptstate = (rptstack[rptlevel - 1].count > 0);
+    rptstate = newrptstate;
+
+    *p = pt;
+
+    return NULL;
+}
+
+
+/* The ".subttl <text>" directive. */
+static char *
+do_subttl(char **p, int pass)
+{
+    char buff[STR_LEN];
+
+    /* Read filename. */
+    skip_white(p);
+    string_lit(p, buff, STR_LEN, 0);
+
+    /* Free any current sub-heading. */
+    list_set_head_sub(buff);
+
+    return NULL;
+}
+
+
 /* The ".syms [off|on|full]" directive. */
 static char *
 do_syms(char **p, int pass)
@@ -966,6 +1054,48 @@ do_title(char **p, int pass)
 }
 
 
+/* The ".warn <text>" directive. */
+static char *
+do_warn(char **p, int pass)
+{
+    char buff[STR_LEN * 4];
+    char *str = *p;
+
+    skip_white(p);
+    string_lit(p, buff, STR_LEN * 4, 0);
+
+    if (pass == 2)
+	printf("*** WARNING: ");
+
+    *p = str;
+    do_echo(p, pass);
+
+    return NULL;
+}
+
+
+/* The ".width <width>" directive. */
+static char *
+do_width(char **p, int pass)
+{
+    value_t v;
+
+    skip_white_and_comment(p);
+    if (IS_EOL(**p))
+	error(ERR_EOL, NULL);
+
+    /* Get the number of characters per line. */
+    v = expr(p);
+    if ((pass == 2) && UNDEFINED(v))
+	error(ERR_UNDEF, NULL);
+
+    /* Set the new number of characters per line. */
+    list_pwidth = (int)v.v;
+
+    return NULL;
+}
+
+
 /* The ".word <data>[,<data>,...]" directive. */
 static char *
 do_word(char **p, int pass)
@@ -994,79 +1124,77 @@ do_word(char **p, int pass)
 }
 
 
-/* The ".warn <text>" directive. */
-static char *
-do_warn(char **p, int pass)
-{
-    char buff[STR_LEN * 4];
-    char *str = *p;
-
-    skip_white(p);
-    string_lit(p, buff, STR_LEN * 4, 0);
-
-    if (pass == 2)
-	printf("*** WARNING: ");
-
-    *p = str;
-    do_echo(p, pass);
-
-    return NULL;
-}
-
-
 static const pseudo_t pseudos[] = {
-  { "ALIGN",	0, do_align,	NULL	},
-  { "ASCII",	0, do_byte,	NULL	},
-  { "ASCIIZ",	0, do_asciz,	NULL	},
-  { "ASCIZ",	0, do_asciz,	NULL	},
-  { "ASSERT",	0, do_assert,	NULL	},
-  { "BINARY",	0, do_blob,	NULL	},
-  { "BLOB",	0, do_blob,	NULL	},
-  { "BYTE",	0, do_byte,	NULL	},
-  { "CPU",	0, do_cpu,	NULL	},
-  { "DATA",	0, do_byte,	NULL	},
-  { "DB",	0, do_byte,	NULL	},
-  { "DEFINE",	0, do_define,	NULL	},
-  { "DL",	0, do_dword,	NULL	},
-  { "DW",	0, do_word,	NULL	},
-  { "DWORD",	0, do_dword,	NULL	},
-  { "ECHO",	0, do_echo,	NULL	},
-  { "ELSE",	1, do_else,	NULL	},
-  { "END",	0, do_end,	NULL	},
-  { "ENDIF",	1, do_endif,	NULL	},
-  { "EQU",	0, do_equ,	NULL	},
-  { "ERROR",	0, do_error,	NULL	},
-  { "FI",	1, do_endif,	NULL	},
-  { "FILL",	0, do_fill,	NULL	},
-  { "IF",	1, do_if,	NULL	},
-  { "IFDEF",	1, do_ifdef,	NULL	},
-  { "IFN",	1, do_ifn,	NULL	},
-  { "IFNDEF",	1, do_ifndef,	NULL	},
-  { "INCLUDE",	0, do_include,	NULL	},
-  { "ORG",	0, do_org,	NULL	},
-  { "PAGE",	0, do_page,	NULL	},
-  { "RADIX",	0, do_radix,	NULL	},
-  { "RADX",	0, do_radix,	NULL	},
-  { "STR",	0, do_byte,	NULL	},
-  { "STRING",	0, do_byte,	NULL	},
-  { "SYM",	0, do_syms,	NULL	},
-  { "SYMS",	0, do_syms,	NULL	},
-  { "TITLE",	0, do_title,	NULL	},
-  { "WARN",	0, do_warn,	NULL	},
-  { "WORD",	0, do_word,	NULL	},
-  { NULL				}
+  { "ALIGN",	0, 0, do_align,		NULL },
+  { "ASCII",	0, 1, do_byte,		NULL },
+  { "ASCIIZ",	0, 1, do_asciz,		NULL },
+  { "ASCIZ",	0, 1, do_asciz,		NULL },
+  { "ASSERT",	0, 1, do_assert,	NULL },
+  { "BINARY",	0, 1, do_blob,		NULL },
+  { "BLOB",	0, 1, do_blob,		NULL },
+  { "BYTE",	0, 0, do_byte,		NULL },
+  { "CPU",	0, 1, do_cpu,		NULL },
+  { "DATA",	0, 1, do_byte,		NULL },
+  { "DB",	0, 0, do_byte,		NULL },
+  { "DEFINE",	0, 0, do_define,	NULL },
+  { "DL",	0, 0, do_dword,		NULL },
+  { "DW",	0, 0, do_word,		NULL },
+  { "DWORD",	0, 0, do_dword,		NULL },
+  { "ECHO",	0, 1, do_echo,		NULL },
+  { "ELSE",	1, 0, do_else,		NULL },
+  { "END",	0, 0, do_end,		NULL },
+  { "ENDIF",	1, 0, do_endif,		NULL },
+  { "ENDREP",	1, 0, do_endrep,	NULL },
+  { "EQU",	0, 0, do_equ,		NULL },
+  { "ERROR",	0, 1, do_error,		NULL },
+  { "FI",	1, 0, do_endif,		NULL },
+  { "FILL",	0, 1, do_fill,		NULL },
+  { "IF",	1, 0, do_if,		NULL },
+  { "IFDEF",	1, 0, do_ifdef,		NULL },
+  { "IFN",	1, 0, do_ifn,		NULL },
+  { "IFNDEF",	1, 0, do_ifndef,	NULL },
+  { "INCLUDE",	0, 0, do_include,	NULL },
+  { "ORG",	0, 0, do_org,		NULL },
+  { "PAGE",	0, 0, do_page,		NULL },
+  { "RADIX",	0, 0, do_radix,		NULL },
+  { "RADX",	0, 0, do_radix,		NULL },
+  { "REPEAT",	0, 0, do_repeat,	NULL },
+  { "SBTTL",	0, 0, do_subttl,	NULL },
+  { "STITLE",	0, 0, do_subttl,	NULL },
+  { "STR",	0, 1, do_byte,		NULL },
+  { "STRING",	0, 1, do_byte,		NULL },
+  { "SUBTTL",	0, 0, do_subttl,	NULL },
+  { "SYM",	0, 0, do_syms,		NULL },
+  { "SYMS",	0, 0, do_syms,		NULL },
+  { "TITLE",	0, 0, do_title,		NULL },
+  { "WARN",	0, 1, do_warn,		NULL },
+  { "WIDTH",	0, 0, do_width,		NULL },
+  { "WORD",	0, 0, do_word,		NULL },
+  { NULL				     }
 };
 
 
 const pseudo_t *
-is_pseudo(const char *name)
+is_pseudo(const char *name, int dot)
 {
+    char id[ID_LEN], *p;
     const pseudo_t *ptr;
     int i;
 
+    /* Convert the mnemonic to uppercase. */
+    p = id;
+    while (*name != '\0')
+        *p++ = (char)toupper(*name++);
+    *p = '\0';
+
     for (ptr = pseudos; ptr->name != NULL; ptr++) {
-	if ((i = strcmp(ptr->name, name)) == 0)
+	if ((i = strcmp(ptr->name, id)) == 0) {
+		if (ptr->dotted && !dot)
+			break;
+
 		return ptr;
+	}
+
 	if (i > 0)
 		break;
     }

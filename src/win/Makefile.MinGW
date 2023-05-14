@@ -8,7 +8,7 @@
 #
 #		Makefile for Windows systems using the MinGW-w64 environment.
 #
-# Version:	@(#)Makefile.MinGW	1.1.0	2023/04/26
+# Version:	@(#)Makefile.MinGW	1.1.0	2023/05/13
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -65,6 +65,63 @@ IHEX	:= $(VARCEM)/contrib/Ihex
 
 
 DEFS	:= -DALLOW_UNDEFINED_IF
+
+
+ifndef MOS6502
+ MOS6502	:= y
+endif
+ifeq ($(MOS6502), y)
+ DEFS		+= -DUSE_MOS6502
+ TARGETS	+= mos6502.o
+endif
+
+ifndef MC6800
+ MC6800		:= n
+endif
+ifeq ($(MC6800), y)
+ DEFS		+= -DUSE_MC6800
+ TARGETS	+= mc6800.o
+endif
+
+ifndef MC6805
+ MC6805		:= n
+endif
+ifeq ($(MC6805), y)
+ DEFS		+= -DUSE_MC6805
+ TARGETS	+= mc6805.o
+endif
+
+ifndef MC6809
+ MC6809		:= n
+endif
+ifeq ($(MC6809), y)
+ DEFS		+= -DUSE_MC6809
+ TARGETS	+= mc6809.o
+endif
+
+ifndef MC6811
+ MC6811		:= n
+endif
+ifeq ($(MC6811), y)
+ DEFS		+= -DUSE_MC6811
+ TARGETS	+= mc6811.o
+endif
+
+ifndef CDP1802
+ CDP1802	:= n
+endif
+ifeq ($(CDP1802), y)
+ DEFS		+= -DUSE_CDP1802
+ TARGETS	+= cdp1802.o
+endif
+
+ifndef SCN2650
+ SCN2650	:= n
+endif
+ifeq ($(SCN2650), y)
+ DEFS		+= -DUSE_SCN2650
+ TARGETS	+= scn2650.o
+endif
 
 
 #########################################################################
@@ -221,7 +278,7 @@ OBJ		:= $(SYSOBJ) \
 		   main.o error.o symbol.o expr.o func.o input.o \
 		   output.o list.o parse.o pseudo.o \
 		   target.o \
-		    mos6502.o
+		    $(TARGETS)
 
 
 all:		$(LIBS) $(PROG)

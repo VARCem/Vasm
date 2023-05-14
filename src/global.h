@@ -8,7 +8,7 @@
  *
  *		Definitions for the entire application.
  *
- * Version:	@(#)global.h	1.0.8	2023/04/26
+ * Version:	@(#)global.h	1.0.9	2023/05/13
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -69,6 +69,7 @@
 
 #define MAX_FILENAMES	256 + 1		// maximum include files
 #define MAX_IFLEVEL	16		// maximum depth of IF levels
+#define MAX_RPTLEVEL	8		// maximum depth of REPEAT levels
 #define RADIX_DEFAULT	10		// default radix is decimal
 
 #define ID_LEN		32		// max #characters in identifiers
@@ -127,6 +128,13 @@ typedef struct sym_ {
 
 struct pseudo;
 
+typedef struct repeat_info {
+    int		file;
+    int		line;
+    char	*pos;
+    unsigned	count;
+} repeat_t;
+
 
 /* Global variables. */
 extern int	opt_d,
@@ -140,7 +148,8 @@ extern char	myname[],
 
 extern uint16_t	pc;
 extern int	line,
-		newline;
+		newline,
+		found_end;
 extern symbol_t	*current_label;
 extern int8_t	org_done;
 extern int8_t	radix;
@@ -148,6 +157,10 @@ extern int	iflevel,
 		ifstate,
 		newifstate,
 		ifstack[];
+extern int	rptlevel,
+		rptstate,
+		newrptstate;
+extern repeat_t	rptstack[];
 extern char	*filenames[];
 extern int	filelines[];
 extern int	filenames_idx,
@@ -191,8 +204,8 @@ extern char	sym_type(const symbol_t *);
 extern symbol_t	*sym_lookup(const char *, symbol_t **);
 extern void	sym_free(symbol_t **);
 extern symbol_t	*sym_aquire(const char *, symbol_t **);
-extern symbol_t	*define_label(const char *, uint16_t, symbol_t *);
-extern void	define_variable(const char *, value_t);
+extern symbol_t	*define_label(const char *, uint16_t, symbol_t *, int);
+extern void	define_variable(const char *, value_t, int);
 
 extern value_t	expr(char **);
 extern value_t	to_byte(value_t, int);
@@ -213,19 +226,21 @@ extern void	emit_addr(uint32_t);
 extern int	emit_str(const char *, int, int);
 extern int	emit_byte(uint8_t, int);
 extern int	emit_word(uint16_t, int);
+extern int	emit_word_be(uint16_t, int);
 extern int	emit_dword(uint32_t, int);
 extern int	save_code(const char *, const uint8_t *, int);
 
 extern void	list_set_head(const char *);
+extern void	list_set_head_sub(const char *);
 extern void	list_set_syms(int);
 extern int	list_init(const char *);
 extern void	list_close(void);
 extern void	list_line(const char *);
-extern void	list_page(const char *);
+extern void	list_page(const char *, const char *);
 extern void	list_save(uint16_t, uint16_t);
 extern void	list_symbols(void);
 
-extern const struct pseudo	*is_pseudo(const char *);
+extern const struct pseudo	*is_pseudo(const char *, int);
 extern char	*pseudo(const struct pseudo *, char **, int);
 
 extern int	set_cpu(const char *, int);

@@ -16,7 +16,7 @@
  *		for the proper use of the ".org" directive, as this then
  *		merely changes the 'load address' of the following bytes.
  *
- * Version:	@(#)output.c	1.0.4	2023/04/26
+ * Version:	@(#)output.c	1.0.5	2023/05/12
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -120,6 +120,22 @@ emit_word(uint16_t w, int pass)
 	/* We use little-endian format here. */
 	code[oc] = w & 0xff;
 	code[oc + 1] = w >> 8;
+    }
+
+    oc += 2;
+
+    return 2;
+}
+
+
+/* Copy a single word (BE) to the output. */
+int
+emit_word_be(uint16_t w, int pass)
+{
+    if (pass == 2) {
+	/* We use big-endian format here. */
+	code[oc] = w >> 8;
+	code[oc + 1] = w & 0xff;
     }
 
     oc += 2;

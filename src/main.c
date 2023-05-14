@@ -10,7 +10,7 @@
  *
  * Usage:	vasm [-dCFqsvPV] [-p processor] [-l fn] [-o fn] [-Dsym[=val]] file ...
  *
- * Version:	@(#)main.c	1.0.7	2023/04/23
+ * Version:	@(#)main.c	1.0.8	2023/05/12
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -104,7 +104,7 @@ nodata:
 	SET_TYPE(v, TYPE_BYTE);
     }
 
-    define_variable(id, v);
+    define_variable(id, v, 0);
 }
 
 

@@ -8,7 +8,7 @@
  *
  *		Parse the source input, process it, and generate output.
  *
- * Version:	@(#)parse.c	1.0.7	2023/04/26
+ * Version:	@(#)parse.c	1.0.8	2023/05/13
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -59,20 +59,24 @@
 
 
 int		line,			// currently processed line number
-		newline;		// next line to be processed
+		newline,		// next line to be processed
+		found_end;		// END directive was found
 symbol_t	*current_label = NULL;	// search scope for local labels
 int8_t		org_done;		// has a .org been performed?
 int8_t		radix;			// current numerical radix
 int		iflevel,		// current level of conditionals
 		ifstate, newifstate,	// current conditional state
 		ifstack[MAX_IFLEVEL];
+int		rptlevel,
+		rptstate, newrptstate;
+repeat_t	rptstack[MAX_RPTLEVEL];
 
 /* program counter and output counter may not be in sync */
 /* this happens if an .org directive is used, which modifies the */
 /* program counter but not the output counter. */
-uint16_t pc = 0;			// addr of currently assembled instr
-uint16_t oc = 0;			// counter of emitted output bytes
-uint16_t sa = 0;			// start addr for generated code (.end)
+uint16_t	pc = 0;			// addr of currently assembled instr
+uint16_t	oc = 0;			// counter of emitted output bytes
+uint16_t	sa = 0;			// start addr for generated code (.end)
 
 
 #ifdef _DEBUG
@@ -249,19 +253,21 @@ statement(char **p, int pass)
 	ident(p, id);
 	skip_white(p);
 
-	if ((**p == EQUAL_CHAR) || !strncmp(*p, "EQU", 3)) {
-		/* Variable definition. */
-		if (**p == EQUAL_CHAR)
-			(*p)++;
-		else
-			(*p) += 3;
+	if (**p == EQUAL_CHAR) {
+		(*p)++;
 
 		v = expr(p);
 
 		if (ifstate)
-			define_variable(id, v);
+			define_variable(id, v, 0);
 		return NULL;
 	} else if ((**p == COLON_CHAR) || !trg_instr_ok(id)) {
+		if ((ptr = is_pseudo(id, 0)) != NULL) {
+			/* All good, we're a pseudo-op. */
+			newp = pseudo(ptr, p, pass);
+			return newp;
+		}
+
 		/*
 		 * Labels either have a colon at the end, OR are anything
 		 * but an valid instruction. To force a label with the same
@@ -271,7 +277,7 @@ statement(char **p, int pass)
 			(*p)++;
 
 		if (ifstate)
-			current_label = define_label(id, pc, NULL);
+			current_label = define_label(id, pc, NULL, 1);
 
 		skip_white_and_comment(p);
 		if (IS_END(**p))
@@ -289,7 +295,7 @@ statement(char **p, int pass)
 		if (current_label == NULL)
 			error(ERR_NO_GLOBAL, NULL);
 
-		define_label(id, pc, current_label);
+		define_label(id, pc, current_label, 0);
 	}
 
 	skip_white(p);
@@ -309,7 +315,7 @@ again:
 	pt = *p;
 	(*p)++;
 	nident_upcase(p, id);
-	if ((ptr = is_pseudo(id)) != NULL) {
+	if ((ptr = is_pseudo(id, 1)) != NULL) {
 		/* All good, we're a directive. */
 		newp = pseudo(ptr, p, pass);
 
@@ -333,7 +339,7 @@ again:
 		strcpy(id, current_label->name);
 		strcat(id, id2);
 
-		define_label(id, pc, NULL);
+		define_label(id, pc, NULL, 0);
 	}
 
 	skip_white_and_comment(p);
@@ -343,6 +349,18 @@ again:
 	/* Restart scanning for statements on this line. */
 	goto again;
     }
+
+    /* Check if this is a pseudo (directive without the dot.) */
+    pt = *p;
+    nident_upcase(p, id);
+    if ((ptr = is_pseudo(id, 0)) != NULL) {
+	/* All good, we're a directive. */
+	skip_white(p);
+	newp = pseudo(ptr, p, pass);
+
+	return newp;
+    }
+    *p = pt;
 
     skip_white_and_comment(p);
     if (IS_END(**p))
@@ -374,6 +392,7 @@ pass(char **p, int pass)
     int err;
 
     errors = 0;
+    found_end = 0;
     line = 1;
     current_label = NULL;
     org_done = 0;
@@ -383,16 +402,22 @@ pass(char **p, int pass)
     iflevel = 0;
     ifstate = 1;
     memset(ifstack, 0x00, sizeof(ifstack));
+    rptlevel = 0;
+    rptstate = 0;
+    memset(rptstack, 0x00, sizeof(rptstack));
 
     list_set_head(NULL);
 
     if ((err = setjmp(error_jmp)) == 0) {
-	while (**p) {
+	while (p && **p) {
 		/* Save current line position for the listing. */
 		list = *p;
 
-		newline = line + 1;
+		if (! rptstate)
+			newline = line + 1;
+
 		newifstate = ifstate;
+		newrptstate = rptstate;
 
 		newp = statement(p, pass);
 
@@ -407,16 +432,29 @@ pass(char **p, int pass)
 
 		skip_eol(p);
 
-		if (pass == 2)
+		if ((pass == 2) && ((rptlevel == 0) || rptstate))
 			list_line(list);
 
 		line = newline;
 		ifstate = newifstate;
+		rptstate = newrptstate;
 
 		if (**p == EOF_CHAR) {
 			(*p)++;
+next_file:
 			filenames_idx++;
 			line = filelines[filenames_idx];
+		}
+
+		if (found_end) {
+			found_end = 0;
+
+			/* If we are in an included file, go down a level. */
+			if (filenames_idx > 0)
+				goto next_file;
+
+			/* Otherwise, force to be done. */
+			p = NULL;
 		}
 
 		if (newp != NULL)
@@ -424,6 +462,14 @@ pass(char **p, int pass)
 
 		list_save(pc, oc);
 	}
+
+	/* Make sure we have matched IF..ENDIF at the end. */
+	if (iflevel > 0)
+		error(ERR_ENDIF, "** end of input**");
+
+	/* Make sure we have matched REPEAT..ENDREP at the end. */
+	if (rptlevel > 0)
+		error(ERR_ENDREP, "** end of input**");
     } else {
 	if (err < ERR_MAXERR)
 		msg = err_msgs[err];

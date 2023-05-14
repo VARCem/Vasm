@@ -8,7 +8,7 @@
 #
 #		Makefile for Windows using Visual Studio 2019.
 #
-# Version:	@(#)Makefile.MSVC	1.1.0	2023/04/26
+# Version:	@(#)Makefile.MSVC	1.1.0	2023/05/13
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -65,6 +65,63 @@ IHEX	:= $(VARCEM)/contrib/Ihex
 
 
 DEFS	:= -DALLOW_UNDEFINED_IF
+
+
+ifndef MOS6502
+ MOS6502	:= y
+endif
+ifeq ($(MOS6502), y)
+ DEFS		+= -DUSE_MOS6502
+ TARGETS	+= mos6502.obj
+endif
+
+ifndef MC6800
+ MC6800		:= n
+endif
+ifeq ($(MC6800), y)
+ DEFS		+= -DUSE_MC6800
+ TARGETS	+= mc6800.obj
+endif
+
+ifndef MC6805
+ MC6805		:= n
+endif
+ifeq ($(MC6805), y)
+ DEFS		+= -DUSE_MC6805
+ TARGETS	+= mc6805.obj
+endif
+
+ifndef MC6809
+ MC6809		:= n
+endif
+ifeq ($(MC6809), y)
+ DEFS		+= -DUSE_MC6809
+ TARGETS	+= mc6809.obj
+endif
+
+ifndef MC6811
+ MC6811		:= n
+endif
+ifeq ($(MC6811), y)
+ DEFS		+= -DUSE_MC6811
+ TARGETS	+= mc6811.obj
+endif
+
+ifndef CDP1802
+ CDP1802	:= n
+endif
+ifeq ($(CDP1802), y)
+ DEFS		+= -DUSE_CDP1802
+ TARGETS	+= cdp1802.obj
+endif
+
+ifndef SCN2650
+ SCN2650	:= n
+endif
+ifeq ($(SCN2650), y)
+ DEFS		+= -DUSE_SCN2650
+ TARGETS	+= scn2650.obj
+endif
 
 
 #########################################################################
@@ -238,7 +295,7 @@ OBJ		:= $(SYSOBJ) \
 		   main.obj error.obj symbol.obj expr.obj func.obj input.obj \
 		   output.obj list.obj parse.obj pseudo.obj \
 		   target.obj \
-		    mos6502.obj
+		    $(TARGETS)
 LDLIBS		+= #advapi32.lib shell32.lib user32.lib kernel32.lib winmm.lib
 
 

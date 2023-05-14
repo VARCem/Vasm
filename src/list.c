@@ -8,7 +8,7 @@
  *
  *		Handle the listfile output.
  *
- * Version:	@(#)list.c	1.0.4	2023/04/26
+ * Version:	@(#)list.c	1.0.5	2023/05/13
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -70,21 +70,35 @@ static int	list_lnr,
 		list_pln;
 static uint16_t	list_oc,
 		list_pc;
-static char	*list_head;
+static char	*list_title;
+static char	*list_subttl;
 static FILE	*list_file = NULL;
 static int	list_syms = 0;
 
 
 void
-list_set_head(const char *head)
+list_set_head(const char *str)
 {
-    if (list_head != NULL)
-        free(list_head);
-    list_head = NULL;
+    if (list_title != NULL)
+        free(list_title);
+    list_title = NULL;
 
     /* .. and set the new one. */
-    if (head != NULL)
-	list_head = strdup(head);
+    if (str != NULL)
+	list_title = strdup(str);
+}
+
+
+void
+list_set_head_sub(const char *str)
+{
+    if (list_subttl != NULL)
+        free(list_subttl);
+    list_subttl = NULL;
+
+    /* .. and set the new one. */
+    if (str != NULL)
+	list_subttl = strdup(str);
 }
 
 
@@ -108,7 +122,7 @@ list_set_syms(int syms)
  * with those default settings, we get to "keep" 60 lines.
  */
 void
-list_page(const char *head)
+list_page(const char *head, const char *sub)
 {
     char buff[1024], page[256], date[64];
     char *ptr = buff;
@@ -120,7 +134,7 @@ list_page(const char *head)
 	return;
 
     if (head == NULL)
-	head = list_head;
+	head = list_title;
 
     /* Initialize printer to condensed mode if width > 80. */
     if (opt_P && list_pnr == 0 && list_pwidth > 80) {
@@ -151,11 +165,16 @@ list_page(const char *head)
 
     sprintf(page, "File: %s", filenames[filenames_idx]);
     i = (head != NULL) ? strlen(head) : 0;
+    i += (sub != NULL) ? strlen(sub) + 3 : 0;
     skip = list_pwidth - (i + strlen(page));
     ptr = buff;
     if (head != NULL) {
 	sprintf(ptr, "%s", head);
 	ptr += strlen(ptr);
+	if (sub != NULL) {
+		sprintf(ptr, " : %s", sub);
+		ptr += strlen(ptr);
+	}
     }
     while (skip--)
 	*ptr++ = ' ';
@@ -165,6 +184,7 @@ list_page(const char *head)
     /* OK, good for another page.. */
     list_pln = list_plength - (3 + 3);	// margin + header
 }
+
 
 /*
  * Generate one line of listing info.
@@ -184,7 +204,7 @@ list_line(const char *p)
 
     if (list_pln == 0) {
 	/* Reset the page. */
-	list_page(list_head);
+	list_page(list_title, list_subttl);
     }
 
     /* Output listing line number. */
@@ -242,7 +262,7 @@ list_symbols(void)
 
     /* If we are not using a listing file, dump to stdout. */
     if (list_file != NULL) {
-	list_page("** SYMBOL TABLE **");	// new page
+	list_page("** SYMBOL TABLE **", NULL);	// new page
 	fp = list_file;				// use listing file
     } else
 	fp = stdout;				// use stdout
@@ -253,7 +273,7 @@ list_symbols(void)
 
 	for (; sym; sym = sym->next) {
 		if ((list_file != NULL) && (list_pln == 0))
-			list_page("** SYMBOL TABLE **");
+			list_page("** SYMBOL TABLE **", NULL);
 
 		fprintf(fp, "%-32s %c ", sym->name, sym_type(sym));
 		if (DEFINED(sym->value)) {
@@ -278,7 +298,7 @@ list_symbols(void)
 		if ((list_syms == 2) && IS_LBL(sym)) {
 			for (loc = sym->locals; loc; loc = loc->next) {
 				if ((list_file != NULL) && (--list_pln == 0))
-					list_page("** SYMBOL TABLE **");
+					list_page("** SYMBOL TABLE **", NULL);
 
 				fprintf(fp, "  %c%-29s %c ",
 					ALPHA_CHAR, loc->name, sym_type(sym));
@@ -329,7 +349,8 @@ list_init(const char *fn)
     list_lnr = 1;
     list_pnr = list_pln = 0;
     list_oc = list_pc = 0;
-    list_head = NULL;
+    list_title = NULL;
+    list_subttl = NULL;
 
     return 1;
 }
