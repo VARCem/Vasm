@@ -8,9 +8,9 @@
  *
  *		A simple but reasonably useful assembler for the 6502.
  *
- * Usage:	vasm [-dCFqsvPV] [-p processor] [-l fn] [-o fn] [-Dsym[=val]] file ...
+ * Usage:	vasm [-dCFqsTvPV] [-p processor] [-l fn] [-o fn] [-Dsym[=val]] file ...
  *
- * Version:	@(#)main.c	1.0.8	2023/05/12
+ * Version:	@(#)main.c	1.0.9	2023/05/14
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -58,6 +58,7 @@
 # include <getopt.h>
 #endif
 #include "global.h"
+#include "target.h"
 #include "version.h"
 
 
@@ -109,9 +110,29 @@ nodata:
 
 
 static void
+init_symbols(void)
+{
+    char temp[128];
+    uint32_t i;
+
+    /* Indicate "builtin" symbol. */
+    line = -1;
+
+    do_define("__VASM__");
+    i = ((APP_VER_MAJOR << 24) | (APP_VER_MINOR << 16) | \
+	 (APP_VER_REV << 8) | APP_VER_PATCH);
+    sprintf(temp, "__VASM_VER__=%i", i);
+    do_define(temp);
+
+    /* Set for "commandline" symbols. */
+    line = 0;
+}
+
+
+static void
 usage(const char *prog)
 {
-    printf("Usage: %s [-dCFPqsvV] [-p processor] [-l fn] [-o fn] [-Dsym[=val]] file ...\n", prog);
+    printf("Usage: %s [-dCFPqsTvV] [-p processor] [-l fn] [-o fn] [-Dsym[=val]] file ...\n", prog);
 
     exit(1);
     /*NOTREACHED*/
@@ -152,6 +173,9 @@ main(int argc, char *argv[])
     filenames_idx = -1;			// this indicates "command line"
     radix = RADIX_DEFAULT;
 
+    /* Create any pre-defined symbols. */
+    init_symbols();
+
     /* Create a version string. */
     sprintf(myname, "%s", APP_NAME);
     sprintf(version, "version %s (%s, %s)",
@@ -164,7 +188,7 @@ main(int argc, char *argv[])
 		STR(ARCH));
 
     opterr = 0;
-    while ((c = getopt(argc, argv, "dCD:Fl:o:Pp:qsvV")) != EOF) switch(c) {
+    while ((c = getopt(argc, argv, "dCD:Fl:o:Pp:qsTvV")) != EOF) switch(c) {
 	case 'C':	// toggle list-offset display (disabled)
 		opt_C ^= 1;
 		break;
@@ -208,6 +232,13 @@ main(int argc, char *argv[])
 		opt_s ^= 1;
 		list_set_syms(opt_s << 1);	// FULL or OFF
 		break;
+
+	case 'T':	// list all supported targets
+		banner();
+		printf("These are the supported target devices:\n\n");
+		trg_list();
+		exit(EXIT_SUCCESS);
+		/*NOTREACHED*/
 
 	case 'v':	// level of verbosity (lowest)
 		opt_v++;

@@ -57,6 +57,7 @@ typedef enum errors_e {
     ERR_ASSERT,			// "assert failed"
     ERR_NODIRECTIVE,		// "unknown directive"
     ERR_INSTR,			// "unknown instruction"
+    ERR_COMMA,			// "comma expected"
     ERR_NUM,			// "value expected"
     ERR_FMT,			// "invalid format specifier"
     ERR_EXPR,			// "error in expression"

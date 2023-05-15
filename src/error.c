@@ -74,6 +74,7 @@ const char	*err_msgs[ERR_MAXERR] = {
     "assert failed",
     "unknown directive",
     "unknown instruction",
+    "comma expected",
     "value expected",
     "invalid format specifier",
     "error in expression",

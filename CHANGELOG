@@ -101,3 +101,16 @@
 + implement the 'stitle' and 'subttl' directives.
 + imported the REPEAT and ENDREP directives from upstream.
 / implement the 'width' directive and, maybe, line folding?
++ fixed some if..else..endif issues.
++ finalized (I hope..) the SCN2650 backend so it can be committed soon.
++ reworked the way we handle pseudo's and directives.
++ added commandline 'T' option, to show all supported devices.
++ added builtin macros __VASM__ (set to 1) and __VASM_VER__ (set to the
+  binary version number, so 0x01000E00 for this commit.)
++ target-device macros (P6502 etc) now start with a _ (underscore), so
+  be sure to update your files!
++ reworked some small issues in the listing output
++ added option that page-length of 255 lines *disables* paging.
++ added the DS directive (alias for FILL, really.)
+- make option to allow for case-insensitivity of symbol names
+- add symbol-table listing in numeric order

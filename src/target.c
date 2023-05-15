@@ -8,7 +8,7 @@
  *
  *		Handle selection of a target device.
  *
- * Version:	@(#)target.c	1.0.3	2023/05/13
+ * Version:	@(#)target.c	1.0.4	2023/05/14
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -57,7 +57,8 @@ extern const target_t	t_6502_old,
 			t_6502_nmos,
 			t_csg6510,
 			t_csg8500,
-			t_65c02;
+			t_r65c02,
+			t_w65c02;
 
 extern const target_t	t_6800;
 extern const target_t	t_6805;
@@ -77,7 +78,9 @@ static const target_t *targets[] = {
     &t_csg6510,			// CSG 6510 (NMOS)
     &t_csg8500,			// CSG 8500 (NMOS)
 
-    &t_65c02,			// standard MOS65C02 (CMOS)
+//  &t_65c02,			// MOS 65C02 (CMOS)
+    &t_r65c02,			// Rockwell 65C02 (CMOS)
+    &t_w65c02,			// WDC 65C02 (CMOS)
 
 #ifdef USE_MC6800
     &t_6800,			// MC6800/01/02
@@ -142,6 +145,17 @@ set_cpu(const char *p, int pass)
 }
 
 
+/* List all supported targets. */
+void
+trg_list(void)
+{
+    const target_t **t;
+
+    for (t = targets; *t != NULL; t++)
+	printf("%-10s %s\n", (*t)->name, (*t)->descr);
+}
+
+
 /* Create a target-specific symbol. */
 void
 trg_symbol(const char *name)
@@ -150,6 +164,7 @@ trg_symbol(const char *name)
     value_t v = { 0 };
     int i = 0;
 
+    id[i++] = '_';
     id[i++] = 'P';
     do {
 	id[i++] = (char)toupper(*name++);

@@ -8,7 +8,7 @@
  *
  *		Parse the source input, process it, and generate output.
  *
- * Version:	@(#)parse.c	1.0.8	2023/05/13
+ * Version:	@(#)parse.c	1.0.8	2023/05/14
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -371,6 +371,11 @@ again:
 	if (isalpha(**p)) {
 		/* Execute instruction and update program counter. */
 		pc += trg_instr(p, pass);
+
+		/* We should have nothing left now.. */
+		skip_white_and_comment(p);
+		if (! IS_EOL(**p))
+			error(ERR_EOL, NULL);
 	} else
 		error(ERR_STMT, NULL);
     } else {

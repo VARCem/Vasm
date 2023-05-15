@@ -8,7 +8,7 @@
  *
  *		Handle the listfile output.
  *
- * Version:	@(#)list.c	1.0.5	2023/05/13
+ * Version:	@(#)list.c	1.0.6	2023/05/14
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -242,7 +242,8 @@ list_line(const char *p)
     }
     fputs("\n", list_file);
 
-    list_pln--;
+    if (list_plength != 255)
+	list_pln--;
 
     if (list_oc < oc)
 	list_line(NULL);
@@ -277,32 +278,34 @@ list_symbols(void)
 
 		fprintf(fp, "%-32s %c ", sym->name, sym_type(sym));
 		if (DEFINED(sym->value)) {
-			fprintf(fp, "%5s ", value_print(sym->value));
+			fprintf(fp, "%9s ", value_print(sym->value));
 			if (IS_VAR(sym))
 				fprintf(fp, "%c", value_type(sym->value));
 			else
 				fprintf(fp, " ");
 			fprintf(fp, "        ");
-			if (sym->filenr != -1)
+			if (sym->linenr < 0)
+				fprintf(fp, "-builtin-");
+			else if (sym->filenr != -1 && sym->linenr != 0)
 				fprintf(fp, "%s:%i",
 					filenames[sym->filenr], sym->linenr);
 			else
 				fprintf(fp, "-command line-");
 		} else
-			fprintf(fp, "%5s", "??");
+			fprintf(fp, "%9s", "??");
 		fprintf(fp, "\n");
 
-		if (list_file != NULL)
+		if (list_file != NULL && list_plength != 255)
 			list_pln--;
 
 		if ((list_syms == 2) && IS_LBL(sym)) {
 			for (loc = sym->locals; loc; loc = loc->next) {
-				if ((list_file != NULL) && (--list_pln == 0))
+				if ((list_file != NULL && (list_plength != 255)) && (--list_pln == 0))
 					list_page("** SYMBOL TABLE **", NULL);
 
 				fprintf(fp, "  %c%-29s %c ",
 					ALPHA_CHAR, loc->name, sym_type(sym));
-				fprintf(fp, "%5s          %s:%i\n",
+				fprintf(fp, "%9s          %s:%i\n",
 					value_print(loc->value),
 					filenames[loc->filenr], loc->linenr);
 			}

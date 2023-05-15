@@ -8,7 +8,7 @@
  *
  *		Definitions for the target backends.
  *
- * Version:	@(#)target.h	1.0.1	2023/04/20
+ * Version:	@(#)target.h	1.0.2	2023/05/14
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -50,8 +50,8 @@
 
 typedef struct target {
     const char	*name;
-
     uint32_t	flags;
+    const char	*descr;
 
     const void	*priv;
     int		priv2;
@@ -64,6 +64,7 @@ typedef struct target {
 
 extern int		trg_set_cpu(const char *);
 
+extern void		trg_list(void);
 extern void		trg_symbol(const char *);
 extern const char	*trg_error(int);
 extern int		trg_instr(char **, int);

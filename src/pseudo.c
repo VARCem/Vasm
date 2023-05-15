@@ -8,7 +8,7 @@
  *
  *		Handle directives and pseudo-ops.
  *
- * Version:	@(#)pseudo.c	1.0.5	2023/05/12
+ * Version:	@(#)pseudo.c	1.0.6	2023/05/14
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -391,7 +391,7 @@ do_echo(char **p, int pass)
     int fmt, next;
     value_t v;
 
-    if (pass == 1) {
+    if (pass == 2) {
 	while (! IS_END(**p))
 		(*p)++;
 	return NULL;
@@ -439,11 +439,14 @@ do_else(char **p, int pass)
     if (! IS_END(**p))
 	error(ERR_EOL, NULL);
 
-    if (iflevel > 0) {
+    if (iflevel > 0)
 	newifstate = !ifstate;
-	ifstate = ifstack[iflevel - 1];
-    } else
+    else
 	error(ERR_ELSE, NULL);
+
+    /* If we are skipping, keep skipping! */
+//    if (! ifstate)
+//	newifstate = ifstate;
 
     return NULL;
 }
@@ -526,10 +529,42 @@ do_endrep(char **p, int pass)
 static char *
 do_error(char **p, int pass)
 {
-    char buff[STR_LEN * 4];
+    char buff[4*STR_LEN], *s;
+    char temp[STR_LEN];
+    int fmt, next;
+    value_t v;
 
-    skip_white(p);
-    string_lit(p, buff, STR_LEN * 4, 0);
+    s = buff;
+
+    do {
+	next = 0;
+
+	skip_white(p);
+	if (**p == '"') {
+		string_lit(p, temp, STR_LEN, 1);
+		sprintf(s, "%s", temp);
+		s += strlen(s);
+	} else {
+		fmt = value_format(p);
+		if (fmt == 0)
+			fmt = FMT_DEC_CHAR;
+		else if (fmt < 0)
+			error(-fmt, NULL);
+
+		v = expr(p);
+		if (DEFINED(v))
+			sprintf(s, "%s", value_print_format(v, fmt));
+		else
+			sprintf(s, "??");
+		s += strlen(s);
+	}
+
+	skip_white(p);
+	if (**p == ',') {
+		skip_curr_and_white(p);
+		next = 1;
+	}
+    } while (next);
 
     error(ERR_USER, buff);
     /*NOTREACHED*/
@@ -624,6 +659,10 @@ do_if(char **p, int pass)
     } else
 	error(ERR_IF, NULL);
 
+    /* If we are skipping, keep skipping! */
+    if (! ifstate)
+	newifstate = ifstate;
+
     return NULL;
 }
 
@@ -647,6 +686,10 @@ do_ifdef(char **p, int pass)
 	newifstate = ((sym != NULL) && DEFINED(sym->value)) ? 1 : 0;
     } else
 	error(ERR_IF, NULL);
+
+    /* If we are skipping, keep skipping! */
+    if (! ifstate)
+	newifstate = ifstate;
 
     return NULL;
 }
@@ -680,6 +723,10 @@ do_ifn(char **p, int pass)
 	newifstate = !!!v.v;
     } else
 	error(ERR_IF, NULL);
+
+    /* If we are skipping, keep skipping! */
+    if (! ifstate)
+	newifstate = ifstate;
 
     return NULL;
 }
@@ -747,6 +794,10 @@ do_ifndef(char **p, int pass)
 //printf("NEWstate = %d\n", newifstate);
     } else
 	error(ERR_IF, NULL);
+
+    /* If we are skipping, keep skipping! */
+    if (! ifstate)
+	newifstate = ifstate;
 
     return NULL;
 }
@@ -1058,17 +1109,46 @@ do_title(char **p, int pass)
 static char *
 do_warn(char **p, int pass)
 {
-    char buff[STR_LEN * 4];
-    char *str = *p;
+    char buff[4*STR_LEN], *s;
+    char temp[STR_LEN];
+    int fmt, next;
+    value_t v;
 
-    skip_white(p);
-    string_lit(p, buff, STR_LEN * 4, 0);
+    s = buff;
+    sprintf(s, "*** WARNING: ");
+    s += strlen(s);
 
-    if (pass == 2)
-	printf("*** WARNING: ");
+    do {
+	next = 0;
 
-    *p = str;
-    do_echo(p, pass);
+	skip_white(p);
+	if (**p == '"') {
+		string_lit(p, temp, STR_LEN, 1);
+		sprintf(s, "%s", temp);
+		s += strlen(s);
+	} else {
+		fmt = value_format(p);
+		if (fmt == 0)
+			fmt = FMT_DEC_CHAR;
+		else if (fmt < 0)
+			error(-fmt, NULL);
+
+		v = expr(p);
+		if (DEFINED(v))
+			sprintf(s, "%s", value_print_format(v, fmt));
+		else
+			sprintf(s, "??");
+		s += strlen(s);
+	}
+
+	skip_white(p);
+	if (**p == ',') {
+		skip_curr_and_white(p);
+		next = 1;
+	}
+    } while (next);
+
+    printf("%s\n", buff);
 
     return NULL;
 }
@@ -1138,6 +1218,7 @@ static const pseudo_t pseudos[] = {
   { "DB",	0, 0, do_byte,		NULL },
   { "DEFINE",	0, 0, do_define,	NULL },
   { "DL",	0, 0, do_dword,		NULL },
+  { "DS",	0, 0, do_fill,		NULL },
   { "DW",	0, 0, do_word,		NULL },
   { "DWORD",	0, 0, do_dword,		NULL },
   { "ECHO",	0, 1, do_echo,		NULL },
@@ -1168,6 +1249,7 @@ static const pseudo_t pseudos[] = {
   { "SYMS",	0, 0, do_syms,		NULL },
   { "TITLE",	0, 0, do_title,		NULL },
   { "WARN",	0, 1, do_warn,		NULL },
+  { "WARNING",	0, 1, do_warn,		NULL },
   { "WIDTH",	0, 0, do_width,		NULL },
   { "WORD",	0, 0, do_word,		NULL },
   { NULL				     }

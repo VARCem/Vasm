@@ -14,7 +14,7 @@
  *		version produced later. The CMOS version also has variants
  *		from Rockwell and WDC, with even more changes.
  *
- * Version:	@(#)mos6502.c	1.0.5	2023/04/26
+ * Version:	@(#)mos6502.c	1.0.7	2023/05/14
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -98,8 +98,8 @@ typedef enum {
 #define CPU_NMOS_0	0x00		// first NMOS processor, ROR bug
 #define CPU_NMOS_1	0x01		// regular NMOS core
 #define CPU_CMOS	0x02		// standard CMOS core
-#define CPU_CMOS_1	0x04		// Rockwell CMOS
-#define CPU_CMOS_2	0x08		// WDC CMOS
+#define CPU_RW		0x04		// Rockwell CMOS
+#define CPU_WDC		0x08		// WDC CMOS
 
 
 typedef struct opcode {
@@ -339,7 +339,7 @@ static const opcode_t opc_cmos[] = {
   {INV ,INV ,INV ,INV ,INV ,INV ,0x87,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV }},
  { "STA", CPU_CMOS,
   {INV ,INV ,INV ,INV ,0x85,0x92,INV ,0x95,INV ,0x8d,0x9d,0x99,INV ,0x81,0x91}},
- { "STP", CPU_CMOS|CPU_CMOS_2,
+ { "STP", CPU_CMOS|CPU_WDC,
   {INV ,0xdb,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV }},
  { "STX", CPU_CMOS,
   {INV ,INV ,INV ,INV ,0x86,INV ,INV ,INV ,0x96,0x8e,INV ,INV ,INV ,INV ,INV }},
@@ -363,7 +363,7 @@ static const opcode_t opc_cmos[] = {
   {INV ,0x9a,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV }},
  { "TYA", CPU_CMOS,
   {INV ,0x98,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV }},
- { "WAI", CPU_CMOS|CPU_CMOS_2,
+ { "WAI", CPU_CMOS|CPU_WDC,
   {INV ,0xcb,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV ,INV }}
 };
 
@@ -371,7 +371,7 @@ static const opcode_t opc_cmos[] = {
 static const uint16_t	am_size[AM_NUM] = { 1,1,2,2,2,2,2,2,2,3,3,3,3,2,2 };
 
 
-static const char *err_msg[] = {
+static const char *err_msg[ERR_MAXTRG - ERR_MAXERR] = {
    "invalid addressing mode",
    "invalid register",
    "malformed indirect X addressing",
@@ -719,7 +719,7 @@ t_instr_ok(const target_t *trg, const char *p)
         *ptr++ = (char)toupper(*p++);
     *ptr = '\0';
 
-    /* First get instruction for given mnemonic. */
+    /* Get instruction for given mnemonic. */
     op = get_mnemonic((const opcode_t *)trg->priv, trg->priv2, id);
     if (op != NULL)
 	return 1;
@@ -728,9 +728,7 @@ t_instr_ok(const target_t *trg, const char *p)
 }
 
 
-/*
- * Return a local error message.
- */
+/* Return a local error message. */
 static const char *
 t_error(int err)
 {
@@ -743,30 +741,42 @@ t_error(int err)
 
 const target_t t_6502_old = {
     "6502_old", CPU_CMOS,
+    "MOS6502 (old)",
     opc_nmos, (sizeof(opc_nmos) / sizeof(opcode_t)),
     t_error, t_instr, t_instr_ok
 };
 
 const target_t t_6502_nmos = {
     "6502", CPU_NMOS_1,
+    "MOS6502",
     opc_nmos, (sizeof(opc_nmos) / sizeof(opcode_t)),
     t_error, t_instr, t_instr_ok
 };
 
 const target_t t_csg6510 = {
     "6510", CPU_NMOS_1,
+    "CSG6510",
     opc_nmos, (sizeof(opc_nmos) / sizeof(opcode_t)),
     t_error, t_instr, t_instr_ok
 };
 
 const target_t t_csg8500 = {
     "8500", CPU_NMOS_1,
+    "CSG8500",
     opc_nmos, (sizeof(opc_nmos) / sizeof(opcode_t)),
     t_error, t_instr, t_instr_ok
 };
 
-const target_t t_65c02 = {
+const target_t t_r65c02 = {
     "65c02", CPU_CMOS,
+    "Rockwell 65C02",
+    opc_cmos, (sizeof(opc_cmos) / sizeof(opcode_t)),
+    t_error, t_instr, t_instr_ok
+};
+
+const target_t t_w65c02 = {
+    "w65c02", CPU_CMOS | CPU_WDC,
+    "WDC 65C02",
     opc_cmos, (sizeof(opc_cmos) / sizeof(opcode_t)),
     t_error, t_instr, t_instr_ok
 };
