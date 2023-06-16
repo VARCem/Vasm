@@ -8,7 +8,7 @@
  *
  *		Handle any errors.
  *
- * Version:	@(#)error.c	1.0.3	2023/05/13
+ * Version:	@(#)error.c	1.0.4	2023/06/05
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -56,7 +56,6 @@
 #endif
 #include <string.h>
 #include <setjmp.h>
-#include "global.h"
 #define HAVE_SETJMP_H
 #include "error.h"
 
@@ -72,6 +71,9 @@ const char	*err_msgs[ERR_MAXERR] = {
     "unknown processor type",
     "out of memory",
     "assert failed",
+    "can not create file",
+    "can not open file",
+    "file format not enabled"
     "unknown directive",
     "unknown instruction",
     "comma expected",
@@ -81,8 +83,10 @@ const char	*err_msgs[ERR_MAXERR] = {
     "incomplete operator",
     "unbalanced parentheses",
     "label required",
+    "label not valid here",
     "identifier expected",
     "identifier length exceeded",
+    "statement expected",
     "illegal statement",
     "end of line expected",
     "illegal redefinition",
@@ -106,9 +110,7 @@ const char	*err_msgs[ERR_MAXERR] = {
     "malformed character constant",
     "string too long",
     "string expected",
-    "can not open file",
     "maximum number of include files reached",
-    "file format not enabled"
 };
 
 

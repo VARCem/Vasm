@@ -1,14 +1,14 @@
 #
-# VARCem	Virtual ARchaeological Computer EMulator.
-#		An emulator of (mostly) x86-based PC systems and devices,
-#		using the ISA,EISA,VLB,MCA  and PCI system buses, roughly
-#		spanning the era between 1981 and 1995.
+# VASM		VARCem Multi-Target Assembler.
+#		A simple table-driven assembler for several 8-bit target
+#		devices, like the 6502, 6800, 80x, Z80 et al series. The
+#		code originated from Bernd B”ckmann's "asm6502" project.
 #
 #		This file is part of the VARCem Project.
 #
-#		Makefile for Windows using Visual Studio 2019.
+#		Makefile for Windows systems using the TCC environment.
 #
-# Version:	@(#)Makefile.MSVC	1.1.0	2023/05/13
+# Version:	@(#)Makefile.TCC	1.2.0	2023/06/05
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -43,7 +43,7 @@
 # THEORY OF  LIABILITY, WHETHER IN  CONTRACT, STRICT  LIABILITY, OR  TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING  IN ANY  WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+#
 
 ifndef ARCH
  ARCH		:= x86
@@ -54,16 +54,6 @@ ifndef DEBUG
 endif
 
 
-# Where is the VARCem tree?
-VARCEM	:= ../../../..
-
-# Where is our Ihex support library?
-IHEX	:= $(VARCEM)/contrib/Ihex
- INCS	+= -I$(IHEX)/include -DUSE_IHEX=3
- LDIR	+= -LIBPATH:$(IHEX)/lib/$(ARCH)
- LDLIBS	+= ihex_s.lib
-
-
 DEFS	:= -DALLOW_UNDEFINED_IF
 
 
@@ -72,7 +62,7 @@ ifndef MOS6502
 endif
 ifeq ($(MOS6502), y)
  DEFS		+= -DUSE_MOS6502
- TARGETS	+= mos6502.obj
+ TARGETS	+= mos6502.o
 endif
 
 ifndef MC6800
@@ -80,7 +70,7 @@ ifndef MC6800
 endif
 ifeq ($(MC6800), y)
  DEFS		+= -DUSE_MC6800
- TARGETS	+= mc6800.obj
+ TARGETS	+= mc6800.o
 endif
 
 ifndef MC6805
@@ -88,7 +78,7 @@ ifndef MC6805
 endif
 ifeq ($(MC6805), y)
  DEFS		+= -DUSE_MC6805
- TARGETS	+= mc6805.obj
+ TARGETS	+= mc6805.o
 endif
 
 ifndef MC6809
@@ -96,7 +86,7 @@ ifndef MC6809
 endif
 ifeq ($(MC6809), y)
  DEFS		+= -DUSE_MC6809
- TARGETS	+= mc6809.obj
+ TARGETS	+= mc6809.o
 endif
 
 ifndef MC6811
@@ -104,7 +94,7 @@ ifndef MC6811
 endif
 ifeq ($(MC6811), y)
  DEFS		+= -DUSE_MC6811
- TARGETS	+= mc6811.obj
+ TARGETS	+= mc6811.o
 endif
 
 ifndef CDP1802
@@ -112,15 +102,23 @@ ifndef CDP1802
 endif
 ifeq ($(CDP1802), y)
  DEFS		+= -DUSE_CDP1802
- TARGETS	+= cdp1802.obj
+ TARGETS	+= cdp1802.o
+endif
+
+ifndef SCMP
+ SCMP		:= y
+endif
+ifeq ($(SCMP), y)
+ DEFS		+= -DUSE_SCMP
+ TARGETS	+= scmp.o
 endif
 
 ifndef SCN2650
- SCN2650	:= n
+ SCN2650	:= y
 endif
 ifeq ($(SCN2650), y)
  DEFS		+= -DUSE_SCN2650
- TARGETS	+= scn2650.obj
+ TARGETS	+= scn2650.o
 endif
 
 
@@ -129,146 +127,129 @@ endif
 #########################################################################
 
 # Definitions for this enivonment.
-DEVENV		:= msvc
+DEVENV		:= tcc
 DEPS		= -MMD -MF $*.d
 DEPFILE		:= .depends-$(DEVENV)
 
 
-# Compilation for Windows X86.
+# Compilation for X86.
 ifeq ($(ARCH), x86)
- MACH		:= /MACHINE:$(ARCH)
+ TARGET		:= 32
+ PREFIX		:=
+ RCTARGET	:= pe-i386
 
- # Allow for WinXP-SP3 builds in 32-bit mode.
- LOPTS_OS	:= ,5.01
-
+ AFLAGS		:= -msse2 -mfpmath=sse
  ifeq ($(OPTIM), y)
-  AFLAGS	:= /arch:AVX2
+  DFLAGS	:= -march=native
  else
-  AFLAGS	:= /arch:SSE2
+  DFLAGS	:= -march=i686
  endif
 endif
 
-# Compilation for Windows X64.
+# Compilation for X64.
 ifeq ($(ARCH), x64)
- MACH		:= /MACHINE:$(ARCH)
- LOPTS_OS	:=
+ TARGET		:= 64 -D__GNUC__
+ PREFIX		:=
+ RCTARGET	:= pe-x86-64
+
+ ifeq ($(OPTIM), y)
+  DFLAGS	:= -march=native
+ endif
 endif
 
-# Compilation for Windows ARM.
-ifeq ($(ARCH), arm)
- MACH		:= /MACHINE:arm
- LOPTS_OS	:=
- # Static-link the VC runtime to avoid DLL problems on Windows RT.
- VCRUNTIME	:= MT
+# Compilation for ARM.
+ifeq ($(ARCH), armv7)
+ error Target ARM7 not supported for Windows !
 endif
 
-# Compilation for Windows ARM64.
-ifeq ($(ARCH), arm64)
- MACH		:= /MACHINE:arm64
- LOPTS_OS	:=
-
- # fatal error LNK1322: cannot avoid potential ARM hazard (Cortex-A53
- # MPCore processor bug #843419) in section #3; please consider using
- # compiler option /Gy if it was not used.
- COPTS		+= /Gy
+# Compilation for ARM64.
+ifeq ($(ARCH), aarch64)
+ error Target ARM64 not supported for Windows !
 endif
 
 
 # The various toolchain programs.
-CC		:= cl.exe /nologo
-CXX		:= cl.exe /nologo
-CPP		:= cl.exe /nologo /EP
-LINK		:= link.exe /NOLOGO
-WINDRES		:= rc.exe /NOLOGO
-AR		:= lib.exe /NOLOGO $(MACH)
+CC		:= tcc -m$(TARGET)
+CXX		:= tcc -m$(TARGET)
+CPP		:= cpp -P
+LINK		:= tcc -m$(TARGET)
+WINDRES		:= windres
+AR		:= tcc-ar
+RANLIB		:= echo
+STRIP		:= echo
 ifndef CAT
  CAT		:= cat
 endif
 
 # Set up the correct toolchain flags.
-OPTS		:= /DARCH=$(ARCH) \
-		   /D_CRT_SECURE_NO_WARNINGS \
-		   /D_CRT_NONSTDC_NO_DEPRECATE \
-		   /D_USE_MATH_DEFINES \
-		   /D_WINSOCK_DEPRECATED_NO_WARNINGS
-COPTS		+= /W3
-CXXOPTS		+= /EHsc
-LOPTS		:= $(MACH)
+OPTS		:= -DARCH=$(ARCH) \
+		   -D_CRT_NON_CONFORMING_SWPRINTFS \
+		   -D__USE_MINGW_ANSI_STDIO_X
 ifndef VCRUNTIME
+ # MinGW does not provide MD/MT yet.
  VCRUNTIME	:= MD
 endif
-ARFLAGS		:=
-LFLAGS		:=
-RCOPTS		:= /r /n /dRC_INVOKED /d_MSC_VER /fo
-
+RCOPTS		:= --input-format=rc -O coff
+ifdef RCTARGET
+ RCOPTS		+= --target=$(RCTARGET)
+endif
+RCOPTS		+= -D RC_INVOKED -o
+AOPTS		:= r
+LOPTS		:= -mconsole
 
 # General build options.
 ifeq ($(DEBUG), y)
- OPTS		+= -D_DEBUG
  VCRUNTIME	:= $(VCRUNTIME)d
- DOPTS		= /Gs /Zi
+ DFLAGS		+= -ggdb -D_DEBUG
  RCOPTS		:= -D_DEBUG $(RCOPTS)
- LOPTS		+= /DEBUG
+ AOPTIM		:=
  ifndef COPTIM
-  COPTIM	:= /Od /Ob3
+  COPTIM	:= -Og
  endif
 else
- LOPTS		+= /DEBUG:NONE #/LTCG
- DOPTS		= #/GL
- ifndef COPTIM
-  COPTIM	:= /Ox /Ob3
+ ifeq ($(OPTIM), y)
+  AOPTIM	:= -mtune=native
+  ifndef COPTIM
+   COPTIM	:= -O3
+  endif
+ else
+  ifndef COPTIM
+   COPTIM	:= -O3
+  endif
  endif
 endif
-COPTS		+= /$(VCRUNTIME)
+OPTS		+= #/$(VCRUNTIME)
 ifeq ($(PROFILER), y)
- LOPTS		+= /MAP
+ LOPTS		+= -Xlinker -Map=$(PROG).map
 endif
-MSVC_API_SHARED	:= -DSHARED
-MSVC_API_STATIC	:= -DSTATIC
 
-
-ifndef MSVC_NO_ISO_WIDE_SPECIFIERS
- OPTS		+= /D_CRT_STDIO_ISO_WIDE_SPECIFIERS
-endif
 
 # Final versions of the toolchain flags.
 CFLAGS		= $(OPTS) $(DFLAGS) $(COPTIM) $(AOPTIM) \
-		  $(AFLAGS) $(INCS) $(DEFS)
-LFLAGS		:= $(LOPTS) $(DFLAGS) $(LDIR)
+		  $(AFLAGS) $(INCS) $(DEFS) \
+		  -mstackrealign \
+		  -fomit-frame-pointer -fno-strict-aliasing \
+		  -Wall -Wundef #-Wmissing-declarations
+LDFLAGS		:= $(LOPTS) $(DFLAGS) $(LDIR)
 ARFLAGS		:= $(AOPTS)
 RCFLAGS		= $(RCOPTS)
 
 
 # Build module rules.
-.SUFFIXES:	.c .cpp .obj .rc .res
+.SUFFIXES:	.c .cpp .o .rc .res
 
 ifeq ($(AUTODEP), y)
-%.obj:		%.c
-		@$(CC) $(CFLAGS) -Fo$@ $(MSVC_API_SHARED) -c $<
-
-%.dbj:		%.c
-		@$(CC) $(CFLAGS) -Fo$@ $(MSVC_API_STATIC) -c $<
-
-%.obj:		%.cpp
-		@$(CXX) $(CXXFLAGS) -Fo$@ $(MSVC_API_SHARED) -c $<
-
-%.dbj:		%.cpp
-		@$(CXX) $(CXXFLAGS) -Fo$@ $(MSVC_API_STATIC) -c $<
+%.o:		%.c
+		@echo Compiling $<
+		@$(CC) $(CFLAGS) $(DEPS) -c $<
 else
-%.obj:		%.c
-		@$(CC) $(CFLAGS) -Fo$@ $(MSVC_API_SHARED) -c $<
-
-%.dbj:		%.c
-		@$(CC) $(CFLAGS) -Fo$@ $(MSVC_API_STATIC) -c $<
-
-%.obj:		%.cpp
-		@$(CXX) $(CXXFLAGS) -Fo$@ $(MSVC_API_SHARED) -c $<
-
-%.dbj:		%.cpp
-		@$(CXX) $(CXXFLAGS) -Fo$@ $(MSVC_API_STATIC) -c $<
+%.o:		%.c
+		@echo Compiling $<
+		@$(CC) $(CFLAGS) -c $<
 
 %.d:		%.c $(wildcard $*.d)
-		@$(CXX) $(CXXFLAGS) -Fo$@ $(MSVC_API_SHARED) -c $<
+		@echo Compiling $<
+		@$(CC) $(CFLAGS) $(DEPS) -E $< >NUL
 endif
 
 # For systems that use these, compile a resource file.
@@ -282,67 +263,51 @@ endif
 #########################################################################
 
 # Final fixups.
-INCS		+= -Iwin
+INCS		+= -Iplat/unix
 
-VPATH		:= win . targets
+VPATH		:= plat/unix targets .
 
-#LIBS		:=
-#LOBJ		:=
-
-PROG		:= vasm.exe
-SYSOBJ		:= vasm.res getopt.obj
+PROG		:= vasm
+SYSOBJ		:=
 OBJ		:= $(SYSOBJ) \
-		   main.obj error.obj symbol.obj expr.obj func.obj input.obj \
-		   output.obj list.obj parse.obj pseudo.obj \
-		   target.obj \
+		   main.o error.o symbol.o expr.o func.o input.o \
+		   output.o list.o parse.o pseudo.o \
+		   target.o \
 		    $(TARGETS)
-LDLIBS		+= #advapi32.lib shell32.lib user32.lib kernel32.lib winmm.lib
 
 
-all:		$(LIBS) $(PROG)
+all:		$(PROG)
 
 
-libfoo.lib libfoo.dll:	$(LOBJ)
-		@echo Linking shared library $@ ..
-		@$(LINK) $(LFLAGS) $(LOPTS_W) /DLL /OUT:$@ \
-			 /IMPLIB:$@.lib $(LOBJ) $(LDLIBS)
-
-libfoo_s.lib:	$(LOBJ)
-		@echo Creating static library $@ ..
-		@$(AR) $(ARFLAGS) /OUT:$@ $(LOBJ)
-
-
-vasm.exe:	$(SYSOBJ) $(OBJ)
+vasm:		$(SYSOBJ) $(OBJ)
 		@echo Linking $@ ..
-		@$(LINK) $(LFLAGS) /SUBSYSTEM:CONSOLE$(LOPTS_OS) \
-			-OUT:$@ $(OBJ) $(LIBS) $(LDLIBS)
+		@$(LINK) $(LDFLAGS) -o $@ $(OBJ) $(LIBS) $(LDLIBS)
+		$(if $(filter $(DEBUG),y),,@$(STRIP) $@)
+
 
 clean:
 		@echo Cleaning objects..
-		@-del *.obj 2>NUL
-		@-del *.d 2>NUL
-		@echo Cleaning resources..
-		@-del *.res 2>NUL
+		@-rm -f *.o
+		@-rm -f *.d
 
 
 clobber:	clean
 		@echo Removing executables..
-		@-del *.exe 2>NUL
+		@-rm -f $(PROG)
 		@echo Cleaning libraries..
-#		@-del *.dll 2>NUL
-		@-del *.lib 2>NUL
-		@-del *.manifest 2>NUL
-#		@-del $(DEPFILE) 2>NUL
+		@-rm -f *.so
+		@-rm -f *.a
+#		@-rm -f $(DEPFILE)
 
 depclean:
-		@-del $(DEPFILE)
+		@-rm -f $(DEPFILE)
 		@echo Creating dependencies..
 		@echo # Run "make depends" to re-create this file. >$(DEPFILE)
 
-depends:	DEPOBJ=$(OBJ:%.obj=%.d)
+depends:	DEPOBJ=$(OBJ:%.o=%.d)
 depends:	depclean $(DEPOBJ)
 		@$(CAT) $(DEPOBJ) >>$(DEPFILE)
-		@-del $(DEPOBJ)
+		@-rm -f $(DEPOBJ)
 
 $(DEPFILE):
 
@@ -357,4 +322,4 @@ else
 endif
 
 
-# End of Makefile.MSVC.
+# End of Makefile.TCC.

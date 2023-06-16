@@ -77,10 +77,10 @@
 + The basic infrastructure for multi-CPU support is now in place; we can
   start adding more processors and their (sub-)models in the backend files.
 - Add C02/RC02/WC02/816, 68xx, 80xx et al support.
-+ Added MC6800,MC6805,MC6809,MC6811,CDP1802,SCN2650 targets.
++ Added MC6800,MC6805,MC6809,MC6811,CDP1802,SC/MP,SCN2650 targets.
 - We now support byte, word and doubleword values. However, are we consistent
   in checking these types within the symbols, labels and expressions?
-- Filling, ORG and hex files.
++ Filling, ORG and hex files.
   We currently allow for filling spaces and auto-filling the .org directive
   for use with straight-binary output files. This is, however, not necessary
   if we are using hex (IntelHEX) or srec (Motorola SRecord) output files, as
@@ -88,6 +88,7 @@
   implemented properly, we will have to re-work the "generating output" code
   to do it as it goes (in pass 2), and not only at the end of that pass. This
   allows such "jumping" to be handled by those file formats.
++ Added Motorola SRecord support for the 16-bit S19 format.
 - fix the sub-relative include path
   If one includes a "../foo/bar/bla.inc" file, and then that file also does
   an include of, say, "xxx.inc", then that file is considered "local" to its
@@ -101,16 +102,20 @@
 + implement the 'stitle' and 'subttl' directives.
 + imported the REPEAT and ENDREP directives from upstream.
 / implement the 'width' directive and, maybe, line folding?
+  This will require us to keep a 'column' counter, and, most likely, unfolding
+  TAB characters into spaces.
 + fixed some if..else..endif issues.
 + finalized (I hope..) the SCN2650 backend so it can be committed soon.
 + reworked the way we handle pseudo's and directives.
 + added commandline 'T' option, to show all supported devices.
 + added builtin macros __VASM__ (set to 1) and __VASM_VER__ (set to the
-  binary version number, so 0x01000E00 for this commit.)
+  binary version number, so 0x01000E00 for version 1.0.14 for example.)
 + target-device macros (P6502 etc) now start with a _ (underscore), so
   be sure to update your files!
-+ reworked some small issues in the listing output
++ reworked some small issues in the listing output.
 + added option that page-length of 255 lines *disables* paging.
 + added the DS directive (alias for FILL, really.)
-- make option to allow for case-insensitivity of symbol names
-- add symbol-table listing in numeric order
++ Removed old -C option (show list_oc value in listing.)
++ Add -C option to allow for case-insensitivity of symbol names.
+- add symbol-table listing in numeric order.
++ cleaned up parser, added listing output for directives.

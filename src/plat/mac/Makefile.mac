@@ -2,13 +2,13 @@
 # VASM		VARCem Multi-Target Assembler.
 #		A simple table-driven assembler for several 8-bit target
 #		devices, like the 6502, 6800, 80x, Z80 et al series. The
-#		code originated from Bernd B”ckmann's "asm6502" project.
+#		code originated from Bernd BÂ”ckmann's "asm6502" project.
 #
 #		This file is part of the VARCem Project.
 #
-#		Makefile for Windows systems using the TCC environment.
+#		Makefile for macOS systems using the Xcode environment.
 #
-# Version:	@(#)Makefile.TCC	1.1.0	2023/05/13
+# Version:	@(#)Makefile.mac	1.2.0	2023/06/05
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -46,22 +46,12 @@
 #
 
 ifndef ARCH
- ARCH		:= x86
+ ARCH		:= x64
 endif
 
 ifndef DEBUG
- DEBUG		:= n
+ DEBUG		:= y
 endif
-
-
-# Where is the VARCem tree?
-VARCEM	:= ../../../..
-
-# Where is our Ihex support library?
-IHEX	:= $(VARCEM)/contrib/Ihex
- INCS	+= -I$(IHEX)/include -DUSE_IHEX=3
- LDIR	+= -L$(IHEX)/lib/$(ARCH)
- LDLIBS	+= -lihex-tcc_s
 
 
 DEFS	:= -DALLOW_UNDEFINED_IF
@@ -115,8 +105,16 @@ ifeq ($(CDP1802), y)
  TARGETS	+= cdp1802.o
 endif
 
+ifndef SCMP
+ SCMP		:= y
+endif
+ifeq ($(SCMP), y)
+ DEFS		+= -DUSE_SCMP
+ TARGETS	+= scmp.o
+endif
+
 ifndef SCN2650
- SCN2650	:= n
+ SCN2650	:= y
 endif
 ifeq ($(SCN2650), y)
  DEFS		+= -DUSE_SCN2650
@@ -129,79 +127,41 @@ endif
 #########################################################################
 
 # Definitions for this enivonment.
-DEVENV		:= tcc
+DEVENV		:= xcode
 DEPS		= -MMD -MF $*.d
 DEPFILE		:= .depends-$(DEVENV)
 
 
-# Compilation for X86.
-ifeq ($(ARCH), x86)
- TARGET		:= 32
- PREFIX		:=
- RCTARGET	:= pe-i386
-
- AFLAGS		:= -msse2 -mfpmath=sse
- ifeq ($(OPTIM), y)
-  DFLAGS	:= -march=native
- else
-  DFLAGS	:= -march=i686
- endif
-endif
-
 # Compilation for X64.
 ifeq ($(ARCH), x64)
- TARGET		:= 64 -D__GNUC__
+ TARGET		:= 64
  PREFIX		:=
- RCTARGET	:= pe-x86-64
 
  ifeq ($(OPTIM), y)
   DFLAGS	:= -march=native
  endif
-endif
-
-# Compilation for ARM.
-ifeq ($(ARCH), armv7)
- error Target ARM7 not supported for Windows !
-endif
-
-# Compilation for ARM64.
-ifeq ($(ARCH), aarch64)
- error Target ARM64 not supported for Windows !
 endif
 
 
 # The various toolchain programs.
-CC		:= tcc -m$(TARGET)
-CXX		:= tcc -m$(TARGET)
+CC		:= gcc -m$(TARGET)
+CXX		:= g++ -m$(TARGET)
 CPP		:= cpp -P
-LINK		:= tcc -m$(TARGET)
-WINDRES		:= windres
-AR		:= tcc-ar
-RANLIB		:= echo
-STRIP		:= echo
+LINK		:= gcc -m$(TARGET)
+AR		:= ar
+RANLIB		:= ranlib
+STRIP		:= strip
 ifndef CAT
  CAT		:= cat
 endif
 
 # Set up the correct toolchain flags.
-OPTS		:= -DARCH=$(ARCH) \
-		   -D_CRT_NON_CONFORMING_SWPRINTFS \
-		   -D__USE_MINGW_ANSI_STDIO_X
-ifndef VCRUNTIME
- # MinGW does not provide MD/MT yet.
- VCRUNTIME	:= MD
-endif
-RCOPTS		:= --input-format=rc -O coff
-ifdef RCTARGET
- RCOPTS		+= --target=$(RCTARGET)
-endif
-RCOPTS		+= -D RC_INVOKED -o
+OPTS		:= -DARCH=$(ARCH)
 AOPTS		:= r
-LOPTS		:= -mconsole
+LOPTS		:=
 
 # General build options.
 ifeq ($(DEBUG), y)
- VCRUNTIME	:= $(VCRUNTIME)d
  DFLAGS		+= -ggdb -D_DEBUG
  RCOPTS		:= -D_DEBUG $(RCOPTS)
  AOPTIM		:=
@@ -220,7 +180,7 @@ else
   endif
  endif
 endif
-OPTS		+= #/$(VCRUNTIME)
+OPTS		+=
 ifeq ($(PROFILER), y)
  LOPTS		+= -Xlinker -Map=$(PROG).map
 endif
@@ -229,16 +189,14 @@ endif
 # Final versions of the toolchain flags.
 CFLAGS		= $(OPTS) $(DFLAGS) $(COPTIM) $(AOPTIM) \
 		  $(AFLAGS) $(INCS) $(DEFS) \
-		  -mstackrealign \
-		  -fomit-frame-pointer -fno-strict-aliasing \
+		  -mstackrealign -fno-strict-aliasing \
 		  -Wall -Wundef #-Wmissing-declarations
 LDFLAGS		:= $(LOPTS) $(DFLAGS) $(LDIR)
 ARFLAGS		:= $(AOPTS)
-RCFLAGS		= $(RCOPTS)
 
 
 # Build module rules.
-.SUFFIXES:	.c .cpp .o .rc .res
+.SUFFIXES:	.c .cpp .o
 
 ifeq ($(AUTODEP), y)
 %.o:		%.c
@@ -254,20 +212,16 @@ else
 		@$(CC) $(CFLAGS) $(DEPS) -E $< >NUL
 endif
 
-# For systems that use these, compile a resource file.
-.rc.res:	$<
-		@echo Processing $<
-		@$(WINDRES) $(RCFLAGS) $@ $<
-
 
 #########################################################################
 #		Nothing should need changing from here on..		#
 #########################################################################
 
 # Final fixups.
-INCS		+= -Iunix
+VPATH		:= plat/mac . targets
 
-VPATH		:= unix targets .
+#LIBS		:=
+#LOBJ		:=
 
 PROG		:= vasm
 SYSOBJ		:=
@@ -291,17 +245,16 @@ clean:
 		@echo Cleaning objects..
 		@-rm -f *.o
 		@-rm -f *.d
-		@echo Cleaning resources..
-		@-rm -f *.res
 
 
 clobber:	clean
 		@echo Removing executables..
 		@-rm -f $(PROG)
 		@echo Cleaning libraries..
-		@-rm -f *.so
+		@-rm -f *.dylib
 		@-rm -f *.a
-#		@-rm -f $(DEPFILE) 2>NUL
+		@-rm -f *.manifest
+#		@-rm -f $(DEPFILE)
 
 depclean:
 		@-rm -f $(DEPFILE)
@@ -326,4 +279,4 @@ else
 endif
 
 
-# End of Makefile.TCC.
+# End of Makefile.mac.

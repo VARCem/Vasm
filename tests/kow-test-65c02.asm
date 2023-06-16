@@ -55,7 +55,7 @@ offset	= $44
 	adc	(extdir),y	; 71 00
 	adc	(extext),y	; 71 00
 	;---
-.ifdef P65C02
+.ifdef _P65C02
 	adc	($12)		; 72 12
 	adc	(dir)		; 72 33
 	adc	(offset)	; 72 44
@@ -99,7 +99,7 @@ offset	= $44
 	and	(extdir),y	; 31 00
 	and	(extext),y	; 31 00
 	;---
-.ifdef P65C02
+.ifdef _P65C02
 	and	($12)		; 32 12
 	and	(dir)		; 32 33
 	and	(offset)	; 32 44
@@ -126,7 +126,7 @@ offset	= $44
 	asl	ext,x		; 1E 22 11
 	asl	extext,x	; 1Eu00v00
 ;.if r65f11+r65c00+r65c02
-.ifdef P65C02
+.ifdef _P65C02
 	bbr	0,$12,*		; 0F 12 FD
 	bbr	1,$12,*		; 1F 12 FD
 	bbr	2,$12,*		; 2F 12 FD
@@ -154,7 +154,7 @@ offset	= $44
 	bcs	@		; B0 FE
 	beq	@		; F0 FE
 	;---
-.ifdef P65C02
+.ifdef _P65C02
 	bit	#$12		; 89 12
 .endif
 	bit	$1234		; 2C 34 12
@@ -165,7 +165,7 @@ offset	= $44
 	bit	dir		; 24 33
 	bit	extext		; 24 00
 	;---
-.ifdef P65C02
+.ifdef _P65C02
 	bit	$12,x		; 34 12
 	bit	dir,x		; 34 33
 	bit	offset,x	; 34 44
@@ -179,7 +179,7 @@ offset	= $44
 	bne	@		; D0 FE
 	bpl	@		; 10 FE
 ;.if r65c00+r65c02
-.ifdef P65C02
+.ifdef _P65C02
 	bra	@		; 80 FE
 .endif
 	brk			; 00
@@ -226,7 +226,7 @@ offset	= $44
 	cmp	(extdir),y	; D1 00
 	cmp	(extext),y	; D1 00
 	;---
-.ifdef P65C02
+.ifdef _P65C02
 	cmp	($12)		; D2 12
 	cmp	(dir)		; D2 33
 	cmp	(offset)	; D2 44
@@ -234,7 +234,7 @@ offset	= $44
 	cmp	(extext)	; D2 00
 .endif
 	;---
-.ifdef P65C02
+.ifdef _P65C02
 	cpx	#$12		; E0 12
 .endif
 	cpx	$12		; E4 12
@@ -244,7 +244,7 @@ offset	= $44
 	cpx	$1234		; EC 34 12
 	cpx	ext		; EC 22 11
 	cpx	extext		; ECu00v00
-.ifdef P65C02
+.ifdef _P65C02
 	cpy	#$12		; C0 12
 .endif
 	;---
@@ -255,7 +255,7 @@ offset	= $44
 	cpy	$1234		; CC 34 12
 	cpy	ext		; CC 22 11
 	cpy	extext		; CCu00v00
-.ifdef P65C02
+.ifdef _P65C02
 ;	dec	a		; 3A
 	dea			; 3A
 .endif
@@ -315,7 +315,7 @@ offset	= $44
 	eor	(extdir),y	; 51 00
 	eor	(extext),y	; 51 00
 	;---
-.ifdef P65C02
+.ifdef _P65C02
 	eor	($12)		; 52 12
 	eor	(dir)		; 52 33
 	eor	(offset)	; 52 44
@@ -323,7 +323,7 @@ offset	= $44
 	eor	(extext)	; 52 00
 .endif
 	;---
-.ifdef P65C02
+.ifdef _P65C02
 	inc	a		; 1A
 	ina			; 1A
 .endif
@@ -358,7 +358,7 @@ offset	= $44
 	jmp	(ext)		; 6C 22 11
 	jmp	(extext)	; 6Cu00v00
 	;---
-.ifdef P65C02
+.ifdef _P65C02
 	jmp	($1234,x)	; 7C 34 12
 	jmp	(ext,x)		; 7C 22 11
 ;	jmp	(extext,x)	; 7Cu00v00
@@ -406,7 +406,7 @@ offset	= $44
 	lda	(extdir),y	; B1 00
 	lda	(extext),y	; B1 00
 	;---
-.ifdef P65C02
+.ifdef _P65C02
 	lda	($12)		; B2 12
 	lda	(dir)		; B2 33
 	lda	(offset)	; B2 44
@@ -466,7 +466,7 @@ offset	= $44
 	lsr	$1234,x		; 5E 34 12
 	lsr	ext,x		; 5E 22 11
 	lsr	extext,x	; 5Eu00v00
-.ifdef PR65C00
+.ifdef _PR65C00
 	mul			; 02
 .endif
 	nop			; EA
@@ -507,7 +507,7 @@ offset	= $44
 	ora	(extdir),y	; 11 00
 	ora	(extext),y	; 11 00
 	;---
-.ifdef P65C02
+.ifdef _P65C02
 	ora	($12)		; 12 12
 	ora	(dir)		; 12 33
 	ora	(offset)	; 12 44
@@ -517,19 +517,19 @@ offset	= $44
 	pha			; 48
 	php			; 08
 ;.if r65c00+r65c02
-.ifdef P65C02
+.ifdef _P65C02
 	phx			; DA
 	phy			; 5A
 .endif
 	pla			; 68
 	plp			; 28
 ;.if r65c00+r65c02
-.ifdef P65C02
+.ifdef _P65C02
 	plx			; FA
 	ply			; 7A
 .endif
 ;.if r65f11+r65c00+r65c02
-.ifdef P65C02
+.ifdef _P65C02
 	rmb	0,$12		; 07 12
 	rmb	1,$12		; 17 12
 	rmb	2,$12		; 27 12
@@ -541,7 +541,7 @@ offset	= $44
 	rmb	0,dir		; 07 33
 	rmb	0,extdir	; 07 00
 .endif
-.ifdef P65C02
+.ifdef _P65C02
 	rol	a		; 2A
 	rol			; 2A
 .endif
@@ -620,7 +620,7 @@ offset	= $44
 	sbc	(extdir),y	; F1 00
 	sbc	(extext),y	; F1 00
 	;---
-.ifdef P65C02
+.ifdef _P65C02
 	sbc	($12)		; F2 12
 	sbc	(dir)		; F2 33
 	sbc	(offset)	; F2 44
@@ -631,7 +631,7 @@ offset	= $44
 	sed			; F8
 	sei			; 78
 ;.if r65f11+r65c00+r65c02
-.ifdef P65C02
+.ifdef _P65C02
 	smb	0,$12		; 87 12
 	smb	1,$12		; 97 12
 	smb	2,$12		; A7 12
@@ -680,7 +680,7 @@ offset	= $44
 	sta	(extdir),y	; 91 00
 	sta	(extext),y	; 91 00
 	;---
-.ifdef P65C02
+.ifdef _P65C02
 	sta	($12)		; 92 12
 	sta	(dir)		; 92 33
 	sta	(offset)	; 92 44
@@ -709,7 +709,7 @@ offset	= $44
 	sty	$12,x		; 94 12
 	sty	dir,x		; 94 33
 	sty	extdir,x	; 94 00
-.ifdef P65C02
+.ifdef _P65C02
 	stz	$12		; 64 12
 	stz	dir		; 64 33
 	stz	extdir		; 64 00
@@ -729,7 +729,7 @@ offset	= $44
 	tax			; AA
 	tay			; A8
 	;---
-.ifdef P65C02
+.ifdef _P65C02
 	trb	$1234		; 1C 34 12
 	trb	ext		; 1C 22 11
 	trb	extext		; 1Cu00v00
@@ -751,7 +751,7 @@ offset	= $44
 	txs			; 9A
 	tya			; 98
 
-.ifdef PW65C02
+.ifdef _PW65C02
 	;---
 	stp			; DB
 	wai			; CB

@@ -10,7 +10,7 @@
  *
  * Usage:	vasm [-dCFqsTvPV] [-p processor] [-l fn] [-o fn] [-Dsym[=val]] file ...
  *
- * Version:	@(#)main.c	1.0.9	2023/05/14
+ * Version:	@(#)main.c	1.0.10	2023/06/15
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -54,6 +54,26 @@
 #include <string.h>
 #include <ctype.h>
 #include <setjmp.h>
+#if defined(__APPLE__) && defined(__MACH__)
+ /* Apple OSX and iOS (Darwin). */
+# include <TargetConditionals.h>
+#  if TARGET_IPHONE_SIMULATOR == 1
+  /* iOS in Xcode simulator */
+# define APP_PLATFORM	"iOS"
+# elif TARGET_OS_IPHONE == 1
+  /* iOS */
+# define APP_PLATFORM	"iOS"
+# elif TARGET_OS_MAC == 1
+  /* macOS */
+# define APP_PLATFORM	"macOS"
+# endif
+#else
+# ifdef _WIN32
+#  define APP_PLATFORM	"Windows"
+# else
+#  define APP_PLATFORM	"Linux"		// any *nix, really
+# endif
+#endif
 #ifndef _MSC_VER
 # include <getopt.h>
 #endif
@@ -63,13 +83,13 @@
 
 
 int		opt_d,		// set DEBUG env variable to enable debug
-		opt_C,			// is true, also list the list offset
-		opt_F,			// if true, perform autofill with .org
-		opt_P,			// enable Printer mode
-		opt_q,			// be very quiet
-		opt_v;			// more verbose
-char		myname[64],		// my name
-		version[128];		// my full version string
+		opt_C,		// if true, do case-insensitive symbol names
+		opt_F,		// if true, perform autofill with .org
+		opt_P,		// enable Printer mode
+		opt_q,		// be very quiet
+		opt_v;		// more verbose
+char		myname[64],	// my name
+		version[128];	// my full version string
 
 
 #ifdef _MSC_VER
@@ -155,7 +175,7 @@ banner(void)
 int
 main(int argc, char *argv[])
 {
-    char *out_name, *list_name;
+    char *out_name, *lst_name;
     char *ttext;
     int c, opt_s;
     size_t size;
@@ -169,7 +189,7 @@ main(int argc, char *argv[])
     opt_F = 1;
     opt_P = opt_s = 0;
     opt_q = opt_v = 0;
-    out_name = list_name = NULL;
+    out_name = lst_name = NULL;
     filenames_idx = -1;			// this indicates "command line"
     radix = RADIX_DEFAULT;
 
@@ -179,13 +199,7 @@ main(int argc, char *argv[])
     /* Create a version string. */
     sprintf(myname, "%s", APP_NAME);
     sprintf(version, "version %s (%s, %s)",
-		APP_VERSION,
-#ifdef _WIN32
-		"Windows",
-#else
-		"Linux",
-#endif
-		STR(ARCH));
+		APP_VERSION, APP_PLATFORM, STR(ARCH));
 
     opterr = 0;
     while ((c = getopt(argc, argv, "dCD:Fl:o:Pp:qsTvV")) != EOF) switch(c) {
@@ -206,7 +220,7 @@ main(int argc, char *argv[])
 		break;
 
 	case 'l':	// set listing file name (none)
-		list_name = optarg;
+		lst_name = optarg;
 		break;
 
 	case 'o':	// set output file name (none)
@@ -262,17 +276,15 @@ main(int argc, char *argv[])
     if (optind == argc)
 	usage(argv[0]);
 
-    //FIXME: if we do not have an output file, auto-generate filename
-    //       from the (first) input file?
-    if (out_name == NULL) {
-	fprintf(stderr, "No output file specified.\n");
+    /* Create output file. */
+    if (! output_open(out_name)) {
 	errors = 1;
 	goto ret0;
     }
 
     /* Create a listing file if requested. */
-    if ((list_name != NULL) && !list_init(list_name)) {
-	fprintf(stderr, "Listing file '%s' could not be created!\n", list_name);
+    if ((lst_name != NULL) && !list_init(lst_name)) {
+	fprintf(stderr, "Listing file '%s' could not be created!\n", lst_name);
 	errors = 1;
 	goto ret0;
     }
@@ -298,32 +310,17 @@ main(int argc, char *argv[])
     if (errors)
 	goto ret1;
 
-    /* Create the output buffer. */
-    ttext = text;
-    code = malloc(oc);
-
     /* Perform Pass 2. */
+    ttext = text;
     errors = pass(&ttext, 2);
     if (errors)
 	goto ret2;
-
-    if (! opt_q)
-	printf("Generated %i bytes of output.\n", oc);
-
-    if (! save_code(out_name, code, oc)) {
-	fprintf(stderr, "error writing output file %s\n", out_name);
-	errors = 1;
-	goto ret2;
-    }
 
     /* Dump the symbols, if enabled. */
     list_symbols();
 
 ret2:
     list_close();
-
-    if (code != NULL)
-	free(code);
 
 ret1:
 //    if (text != NULL)
@@ -332,14 +329,20 @@ ret1:
     sym_free(NULL);
 
 ret0:
+    if ((c = output_close(errors)) <= 0) {
+	fprintf(stderr, "error writing output file %s\n", out_name);
+	errors = 1;
+    } else {
+	if (! opt_q)
+		printf("Generated %i bytes of output.\n", c);
+    }
+
     if (errors) {
-	if (list_name != NULL)
-		(void)remove(list_name);
-	if (out_name != NULL)
-		(void)remove(out_name);
+	if (lst_name != NULL)
+		(void)remove(lst_name);
 
 	return EXIT_FAILURE;
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }

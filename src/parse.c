@@ -8,7 +8,7 @@
  *
  *		Parse the source input, process it, and generate output.
  *
- * Version:	@(#)parse.c	1.0.8	2023/05/14
+ * Version:	@(#)parse.c	1.0.10	2023/06/15
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -62,8 +62,8 @@ int		line,			// currently processed line number
 		newline,		// next line to be processed
 		found_end;		// END directive was found
 symbol_t	*current_label = NULL;	// search scope for local labels
-int8_t		org_done;		// has a .org been performed?
 int8_t		radix;			// current numerical radix
+const struct pseudo *psop;		// current pseudo/directive
 int		iflevel,		// current level of conditionals
 		ifstate, newifstate,	// current conditional state
 		ifstack[MAX_IFLEVEL];
@@ -71,12 +71,14 @@ int		rptlevel,
 		rptstate, newrptstate;
 repeat_t	rptstack[MAX_RPTLEVEL];
 
-/* program counter and output counter may not be in sync */
-/* this happens if an .org directive is used, which modifies the */
-/* program counter but not the output counter. */
-uint16_t	pc = 0;			// addr of currently assembled instr
-uint16_t	oc = 0;			// counter of emitted output bytes
-uint16_t	sa = 0;			// start addr for generated code (.end)
+/*
+ * The program counter and output counter may not be in sync
+ * if an .org directive is used. This modifies the program
+ * counter but not the output counter.
+ */
+uint32_t	org = 0,		// load address
+		pc = 0,			// addr of currently assembled instr
+		sa = 0;			// start addr for generated code (.end)
 
 
 #ifdef _DEBUG
@@ -237,129 +239,173 @@ nident_upcase(char **p, char *id)
 static char *
 statement(char **p, int pass)
 {
-    char id[ID_LEN], id2[ID_LEN];
-    const struct pseudo *ptr;
-    char *newp = NULL;
-    value_t v;
-    char *pt;
+    char id[ID_LEN], id2[ID_LEN], *pt;
+    int label = 0, local = 0;
 
     skip_white_and_comment(p);
     if (IS_END(**p))
 	return NULL;
 
     /* First check for variable or label definition. */
+    memset(id, 0x00, sizeof(id));
     pt = *p;
-    if (isalpha(**p)) {
+
+    /* Local labels can start with a digit. */
+    if (**p == ALPHA_CHAR) {
+	(*p)++;
+	if (! isalnum(**p))
+		error(ERR_ID, NULL);
+
+	nident(p, id);
+	local = 1;
+    } else if (isalpha(**p)) {
+	/* But regular identifiers must start with an alpha. */
 	ident(p, id);
-	skip_white(p);
-
-	if (**p == EQUAL_CHAR) {
-		(*p)++;
-
-		v = expr(p);
-
-		if (ifstate)
-			define_variable(id, v, 0);
-		return NULL;
-	} else if ((**p == COLON_CHAR) || !trg_instr_ok(id)) {
-		if ((ptr = is_pseudo(id, 0)) != NULL) {
-			/* All good, we're a pseudo-op. */
-			newp = pseudo(ptr, p, pass);
-			return newp;
-		}
-
-		/*
-		 * Labels either have a colon at the end, OR are anything
-		 * but an valid instruction. To force a label with the same
-		 * name as an instruction, add a colon to it :)
-		 */
-		if (**p == COLON_CHAR)
-			(*p)++;
-
-		if (ifstate)
-			current_label = define_label(id, pc, NULL, 1);
-
-		skip_white_and_comment(p);
-		if (IS_END(**p))
-			return NULL;
-	} else
-		*p = pt;
     }
 
-    /* Local label definition? */
-    else if (**p == ALPHA_CHAR) {
+    /*
+     * Labels either have a colon at the end, OR are anything
+     * but a valid instruction. To force a label with the same
+     * name as an instruction, add a colon to it :)
+     */
+    if (**p == COLON_CHAR) {
 	(*p)++;
-	nident(p, id);
+	label = 1;
+    }
 
+    /* Skip any space or comment. */
+    skip_white_and_comment(p);
+
+    if (label ||
+	(id[0] != '\0' && !trg_instr_ok(id) && (is_pseudo(id, 0) == NULL))) {
+	/*
+	 * This is either a forced label (because it has a
+	 * colon at the end), or it is a regular identifier
+	 * and it is NOT an instruction or pseudo.
+	 */
 	if (ifstate) {
-		if (current_label == NULL)
+		/*
+		 * FIXME:
+		 * For now, we do allow standalone labels, but
+		 * _ONLY_ if they are declared as one (meaning,
+		 * with a colon.) Otherwise, they will be seen
+		 * as (probably unused) label symbols...
+		 */
+		if (IS_END(**p) && !label)
+			error(ERR_STMT, NULL);
+
+		/* Locals can only be "within" a global. */
+		if (local && current_label == NULL)
 			error(ERR_NO_GLOBAL, NULL);
 
-		define_label(id, pc, current_label, 0);
+		/* Either way, define this label. */
+		if (local)
+			define_label(id, pc, current_label, 1);
+		else
+			current_label = define_label(id, pc, NULL, 1);
 	}
+    } else {
+	/* No identifier/label present, so restore line pointer. */
+	*p = pt;
 
-	skip_white(p);
-
-	if (**p == COLON_CHAR)
-		(*p)++;
-
+	/* Skip any space or comment. */
 	skip_white_and_comment(p);
-	if (IS_END(**p))
-		return NULL;
+    }
+
+    /* Bail out if EOL. */
+    if (IS_END(**p)) {
+	/* Just a label. */
+	return NULL;
+    }
+
+    if (**p == EQUAL_CHAR) {
+	/* Cannot use a label as a target for EQU, check for that. */
+	if (label)
+		error(ERR_NOLABEL, NULL);
+	(*p)++;
+
+	/* Pretend to be an EQU directive. */
+	psop = is_pseudo("EQU", 0);
+	(void)pseudo(psop, p, pass);
+	return NULL;
     }
 
     /* Check for directive or instruction. */
-again:
-    if (**p == DOT_CHAR) {
+    while (**p == DOT_CHAR) {
 	/* Local label or directive. */
 	pt = *p;
 	(*p)++;
 	nident_upcase(p, id);
-	if ((ptr = is_pseudo(id, 1)) != NULL) {
+	if ((psop = is_pseudo(id, 1)) != NULL) {
 		/* All good, we're a directive. */
-		newp = pseudo(ptr, p, pass);
-
-		return newp;
+		skip_white(p);
+		return pseudo(psop, p, pass);
 	}
 
-	if (ifstate) {
-		if (current_label == NULL)
-			error(ERR_NO_GLOBAL, NULL);
+	/*
+	 * This is a "dot label", which is a "shorthand" version
+	 * of a global label that starts with the current global
+	 * label, but then gets the current identifier tacked on.
+	 *
+	 *
+	 * foo:    instr
+	 * .1:     more instr
+         *         bar .1
+         *
+         * In the above, ".1" is a "dot label", and will always
+	 * be expanded to "foo.1".
+	 *
+	 * Obviously, we do need a current global label..
+         */
+	if (current_label == NULL)
+		error(ERR_NO_GLOBAL, NULL);
 
-		/* Restore our pointer and get the label ID. */
-		*p = pt;
-		nident(p, id2);
+	/* Restore our pointer and get the dot-label ID. */
+	*p = pt;
+	nident(p, id2);
 
-		/* We don't care about the colon. */
-		if (**p == COLON_CHAR)
-			(*p)++;
+	/* We don't care about the colon. */
+	if (**p == COLON_CHAR)
+		(*p)++;
 
-		if ((strlen(current_label->name) + strlen(id2)) >= ID_LEN)
-			error(ERR_IDLEN, id2);
-		strcpy(id, current_label->name);
-		strcat(id, id2);
+	/* Build the full label value. */
+	if ((strlen(current_label->name) + strlen(id2)) >= ID_LEN)
+		error(ERR_IDLEN, id2);
+	strcpy(id, current_label->name);
+	strcat(id, id2);
 
+	/* Define only if needed. */
+	if (ifstate)
 		define_label(id, pc, NULL, 0);
-	}
 
+	/* Skip trailing space and comments. */
 	skip_white_and_comment(p);
 	if (IS_END(**p))
 		return NULL;
 
-	/* Restart scanning for statements on this line. */
-	goto again;
+	/*
+	 * Restart scanning for statements on this line.
+	 *
+	 * We could have directives (also starting with a dot)
+	 * on a line with a dot-label:
+	 *
+	 * foo:    bar
+         * .1:     .byte "blah"
+         *
+         * so we have to loop here.
+	 */
     }
 
     /* Check if this is a pseudo (directive without the dot.) */
     pt = *p;
     nident_upcase(p, id);
-    if ((ptr = is_pseudo(id, 0)) != NULL) {
+    if ((psop = is_pseudo(id, 0)) != NULL) {
 	/* All good, we're a directive. */
 	skip_white(p);
-	newp = pseudo(ptr, p, pass);
-
-	return newp;
+	return pseudo(psop, p, pass);
     }
+
+    /* No pseudo either, must be a (processor) mnemonic then. */
     *p = pt;
 
     skip_white_and_comment(p);
@@ -377,12 +423,12 @@ again:
 		if (! IS_EOL(**p))
 			error(ERR_EOL, NULL);
 	} else
-		error(ERR_STMT, NULL);
-    } else {
-	/* Just skip. */
-	while (! IS_END(**p))
-		(*p)++;
+		error(ERR_NOSTMT, NULL);
     }
+
+    /* Skip all trailing stuff. */
+    while (! IS_END(**p))
+	(*p)++;
 
     return NULL;
 }
@@ -392,17 +438,15 @@ int
 pass(char **p, int pass)
 {
     const char *msg;
+    char *newtext;
     char *list;
-    char *newp;
     int err;
 
     errors = 0;
     found_end = 0;
     line = 1;
     current_label = NULL;
-    org_done = 0;
     radix = RADIX_DEFAULT;
-    pc = oc = 0;
     filenames_idx = 0;
     iflevel = 0;
     ifstate = 1;
@@ -411,42 +455,46 @@ pass(char **p, int pass)
     rptstate = 0;
     memset(rptstack, 0x00, sizeof(rptstack));
 
+    pc = 0;
+    output_reset();
+
     list_set_head(NULL);
+    list_set_head_sub(NULL);
+    list_save(pc);
 
     if ((err = setjmp(error_jmp)) == 0) {
 	while (p && **p) {
-		/* Save current line position for the listing. */
+		/* Initialize per-line variables. */
+		psop = NULL;
 		list = *p;
-
-		if (! rptstate)
-			newline = line + 1;
-
+		newline = line + 1;
 		newifstate = ifstate;
 		newrptstate = rptstate;
 
-		newp = statement(p, pass);
+		/* Parse the current line. */
+		newtext = statement(p, pass);
 
+		/* Skip any trailing space/comment until newline. */
 		skip_white_and_comment(p);
-
-		/*
-		 * Every statement ends with a newline.
-		 * If it is not found here it is an error condition.
-		 */
 		if (! IS_END(**p))
 			error(ERR_EOL, NULL);
-
-		skip_eol(p);
 
 		if ((pass == 2) && ((rptlevel == 0) || rptstate))
 			list_line(list);
 
-		line = newline;
+		/* Update our state. */
 		ifstate = newifstate;
 		rptstate = newrptstate;
+		if (!rptstate || !rptstack[rptlevel].repeating)
+			line = newline;
 
+		/* OK, skip into the next line. */
+		skip_eol(p);
 		if (**p == EOF_CHAR) {
+			/* Skip the EOF.. */
 			(*p)++;
 next_file:
+			/* .. and pop into the new file. */
 			filenames_idx++;
 			line = filelines[filenames_idx];
 		}
@@ -462,10 +510,11 @@ next_file:
 			p = NULL;
 		}
 
-		if (newp != NULL)
-			text = newp;
+		/* The "include" directive may have changed "text" on us! */
+		if (newtext != NULL)
+			text = newtext;
 
-		list_save(pc, oc);
+		list_save(pc);
 	}
 
 	/* Make sure we have matched IF..ENDIF at the end. */

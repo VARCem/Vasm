@@ -8,7 +8,7 @@
  *
  *		Definitions for the entire application.
  *
- * Version:	@(#)global.h	1.0.9	2023/05/13
+ * Version:	@(#)global.h	1.0.10	2023/06/15
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -133,49 +133,50 @@ typedef struct repeat_info {
     int		line;
     char	*pos;
     unsigned	count;
+    int		repeating;
 } repeat_t;
 
 
 /* Global variables. */
-extern int	opt_d,
-		opt_C,
-		opt_F,
-		opt_P,
-		opt_q,
-		opt_v;
-extern char	myname[],
-		version[];
+extern int		opt_d,
+			opt_C,
+			opt_F,
+			opt_P,
+			opt_q,
+			opt_v;
+extern char		myname[],
+			version[];
 
-extern uint16_t	pc;
-extern int	line,
-		newline,
-		found_end;
-extern symbol_t	*current_label;
-extern int8_t	org_done;
-extern int8_t	radix;
-extern int	iflevel,
-		ifstate,
-		newifstate,
-		ifstack[];
-extern int	rptlevel,
-		rptstate,
-		newrptstate;
-extern repeat_t	rptstack[];
-extern char	*filenames[];
-extern int	filelines[];
-extern int	filenames_idx,
-		filenames_len;
+extern char		*text;
+extern int		text_len;
 
-extern char	*text;
-extern int	text_len;
+extern uint32_t		org,
+			pc,
+			sa;
+extern int		line,
+			newline,
+			found_end;
+extern symbol_t		*current_label;
+extern int8_t		radix;
+extern const struct pseudo *psop;
+extern int		iflevel,
+			ifstate,
+			newifstate,
+			ifstack[];
+extern int		rptlevel,
+			rptstate,
+			newrptstate;
+extern repeat_t		rptstack[];
+extern char		*filenames[];
+extern int		filelines[];
+extern int		filenames_idx,
+			filenames_len;
 
-extern uint8_t	*code;
-extern uint32_t	code_base;
-extern uint16_t	oc,
-		sa;
+extern uint32_t		output_size;
+extern uint8_t		*output_buff;
 
-extern int	list_plength,
-		list_pwidth;
+extern int		list_plength,
+			list_pwidth;
 
 
 #if defined(_WIN32) && defined(_MSC_VER)
@@ -185,65 +186,71 @@ extern int	list_plength,
 
 /* Functions. */
 #ifdef _DEBUG
-extern char	*dumpline(const char *p);
+extern char		*dumpline(const char *p);
 #endif
-extern int	pass(char **, int);
-extern int	is_end(char);
-extern void	skip_eol(char **);
-extern void	skip_white(char **);
-extern void	skip_white_and_comment(char **);
-extern void	skip_curr_and_white(char **);
-extern void	ident(char **, char *);
-extern void	upcase(char **, char *);
-extern void	ident_upcase(char **, char *);
-extern void	nident(char **, char *);
-extern void	nident_upcase(char **, char *);
+extern int		pass(char **, int);
+extern int		is_end(char);
+extern void		skip_eol(char **);
+extern void		skip_white(char **);
+extern void		skip_white_and_comment(char **);
+extern void		skip_curr_and_white(char **);
+extern void		ident(char **, char *);
+extern void		upcase(char **, char *);
+extern void		ident_upcase(char **, char *);
+extern void		nident(char **, char *);
+extern void		nident_upcase(char **, char *);
 
-extern symbol_t	*sym_table(void);
-extern char	sym_type(const symbol_t *);
-extern symbol_t	*sym_lookup(const char *, symbol_t **);
-extern void	sym_free(symbol_t **);
-extern symbol_t	*sym_aquire(const char *, symbol_t **);
-extern symbol_t	*define_label(const char *, uint16_t, symbol_t *, int);
-extern void	define_variable(const char *, value_t, int);
+extern symbol_t		*sym_table(void);
+extern char		sym_type(const symbol_t *);
+extern symbol_t		*sym_lookup(const char *, symbol_t **);
+extern void		sym_free(symbol_t **);
+extern symbol_t		*sym_aquire(const char *, symbol_t **);
+extern symbol_t		*define_label(const char *, uint32_t, symbol_t *, int);
+extern void		define_variable(const char *, value_t, int);
+extern const char	*sym_print(const symbol_t *);
 
-extern value_t	expr(char **);
-extern value_t	to_byte(value_t, int);
-extern value_t	to_word(value_t, int);
-extern char	value_type(value_t);
-extern int	value_format(char **);
-extern char	*value_print(value_t);
-extern char	*value_print_format(value_t, int);
+extern value_t		expr(char **);
+extern value_t		to_byte(value_t, int);
+extern value_t		to_word(value_t, int);
+extern char		value_type(value_t);
+extern int		value_format(char **);
+extern char		*value_print(value_t);
+extern char		*value_print_format(value_t, int);
 
-extern value_t	function(const char *, char **);
+extern value_t		function(const char *, char **);
 
-extern size_t	file_size(const char *);
-extern int	file_read_buf(const char *, char *);
-extern int	file_read(const char *, char **, size_t *);
-extern void	file_add(const char *, int, const char *, size_t);
+extern size_t		file_size(const char *);
+extern int		file_read_buf(const char *, char *);
+extern int		file_read(const char *, char **, size_t *);
+extern void		file_add(const char *, int, const char *, size_t);
 
-extern void	emit_addr(uint32_t);
-extern int	emit_str(const char *, int, int);
-extern int	emit_byte(uint8_t, int);
-extern int	emit_word(uint16_t, int);
-extern int	emit_word_be(uint16_t, int);
-extern int	emit_dword(uint32_t, int);
-extern int	save_code(const char *, const uint8_t *, int);
+extern int		output_open(const char *);
+extern int		output_close(int);
+extern void		output_reset(void);
+extern void		output_addr(uint32_t, int);
+extern void		output_start(uint32_t, int);
+extern void		emit_str(const char *, int, int);
+extern void		emit_byte(uint8_t, int);
+extern void		emit_word(uint16_t, int);
+extern void		emit_word_be(uint16_t, int);
+extern void		emit_dword(uint32_t, int);
+extern void		emit_dword_be(uint32_t, int);
 
-extern void	list_set_head(const char *);
-extern void	list_set_head_sub(const char *);
-extern void	list_set_syms(int);
-extern int	list_init(const char *);
-extern void	list_close(void);
-extern void	list_line(const char *);
-extern void	list_page(const char *, const char *);
-extern void	list_save(uint16_t, uint16_t);
-extern void	list_symbols(void);
+extern void		list_set_head(const char *);
+extern void		list_set_head_sub(const char *);
+extern void		list_set_syms(int);
+extern int		list_init(const char *);
+extern void		list_close(void);
+extern void		list_line(const char *);
+extern void		list_page(const char *, const char *);
+extern void		list_save(uint32_t);
+extern void		list_symbols(void);
 
 extern const struct pseudo	*is_pseudo(const char *, int);
-extern char	*pseudo(const struct pseudo *, char **, int);
+extern char		*pseudo(const struct pseudo *, char **, int);
+extern char		*pseudo_list(const struct pseudo *, char *);
 
-extern int	set_cpu(const char *, int);
+extern int		set_cpu(const char *, int);
 
 
 #endif	/*GLOBAL_H*/

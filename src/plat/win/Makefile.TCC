@@ -8,7 +8,7 @@
 #
 #		Makefile for Windows systems using the TCC environment.
 #
-# Version:	@(#)Makefile.TCC	1.1.0	2023/05/13
+# Version:	@(#)Makefile.TCC	1.2.0	2023/06/05
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -52,16 +52,6 @@ endif
 ifndef DEBUG
  DEBUG		:= n
 endif
-
-
-# Where is the VARCem tree?
-VARCEM	:= ../../../..
-
-# Where is our Ihex support library?
-IHEX	:= $(VARCEM)/contrib/Ihex
- INCS	+= -I$(IHEX)/include -DUSE_IHEX=3
- LDIR	+= -L$(IHEX)/lib/$(ARCH)
- LDLIBS	+= -lihex-tcc_s
 
 
 DEFS	:= -DALLOW_UNDEFINED_IF
@@ -115,8 +105,16 @@ ifeq ($(CDP1802), y)
  TARGETS	+= cdp1802.o
 endif
 
+ifndef SCMP
+ SCMP		:= y
+endif
+ifeq ($(SCMP), y)
+ DEFS		+= -DUSE_SCMP
+ TARGETS	+= scmp.o
+endif
+
 ifndef SCN2650
- SCN2650	:= n
+ SCN2650	:= y
 endif
 ifeq ($(SCN2650), y)
  DEFS		+= -DUSE_SCN2650
@@ -257,7 +255,7 @@ endif
 # For systems that use these, compile a resource file.
 .rc.res:	$<
 		@echo Processing $<
-		@$(WINDRES) $(RCFLAGS) $@ $<
+		$(WINDRES) $(RCFLAGS) $@ $<
 
 
 #########################################################################
@@ -265,9 +263,9 @@ endif
 #########################################################################
 
 # Final fixups.
-INCS		+= -Iwin
+INCS		+= -Iplat/win
 
-VPATH		:= win targets .
+VPATH		:= plat/win targets .
 
 PROG		:= vasm.exe
 SYSOBJ		:= vasm.res getopt.o
@@ -283,7 +281,7 @@ all:		$(PROG)
 
 vasm.exe:	$(SYSOBJ) $(OBJ)
 		@echo Linking $@ ..
-		@$(LINK) $(LDFLAGS) -o $@ $(OBJ) $(LIBS) $(LDLIBS)
+		$(LINK) $(LDFLAGS) -o $@ $(OBJ) $(LIBS) $(LDLIBS)
 		$(if $(filter $(DEBUG),y),,@$(STRIP) $@)
 
 

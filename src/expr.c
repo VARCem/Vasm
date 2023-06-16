@@ -8,7 +8,7 @@
  *
  *		General expression handler.
  *
- * Version:	@(#)expr.c	1.0.6	2023/04/26
+ * Version:	@(#)expr.c	1.0.8	2023/06/15
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -373,23 +373,23 @@ product(char **p)
 
 	switch (op) {
 		case '*':	// multiply
-			res.v = (uint16_t)(res.v * n2.v);
+			res.v = (uint32_t)(res.v * n2.v);
 			break;
 
 		case '/':	// divide
 			if (n2.v == 0)
 				error(ERR_ZERO, NULL);
-			res.v = (uint16_t)(res.v / n2.v);
+			res.v = (uint32_t)(res.v / n2.v);
 			break;
 
 		case '%':	// modulo
 			if (n2.v == 0)
 				error(ERR_ZERO, NULL);
-			res.v = (uint16_t)(res.v % n2.v);
+			res.v = (uint32_t)(res.v % n2.v);
 			break;
 
 		case '&':	// bitwise AND
-			res.v = (uint16_t)(res.v & n2.v);
+			res.v = (uint32_t)(res.v & n2.v);
 			break;
 
 		case '<':	// shift left
@@ -651,7 +651,7 @@ expr(char **p)
 	/* High-byte (MSB) operator. */
 	(*p)++;
 	v = compare(p);
-	v.v = v.v >> 8;
+	v.v = (v.v >> 8) & 0xff;
 	SET_TYPE(v, TYPE_BYTE);
     } else if (op == '<') {
 	/* Low-byte (LSB) operator. */
@@ -808,6 +808,7 @@ value_print_format(value_t v, int fmt)
 
     switch (fmt) {
 	case FMT_BIN_CHAR:
+		*bufp++ = FMT_BIN_CHAR;
 		for (i = 0; i < len; i++)
 			*bufp++ = (v.v & (1 << ((len - i) - 1))) ? '1':'0';
 		*bufp = '\0';

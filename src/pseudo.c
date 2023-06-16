@@ -8,7 +8,7 @@
  *
  *		Handle directives and pseudo-ops.
  *
- * Version:	@(#)pseudo.c	1.0.6	2023/05/14
+ * Version:	@(#)pseudo.c	1.0.7	2023/06/15
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -57,7 +57,7 @@ typedef struct pseudo {
     int		always;
     int		dotted;
     char	*(*func)(char **, int);
-    void	*lister;
+    char	*(*list)(char *);
 } pseudo_t;
 
 
@@ -140,8 +140,8 @@ do_asciz(char **p, int pass)
 	skip_white(p);
 	if (**p == '"') {
 		len = string_lit(p, buf, STR_LEN, 1);
-		emit_str(buf, (uint16_t)len, pass);
-		pc += (uint16_t)len;
+		emit_str(buf, len, pass);
+		pc += len;
 		emit_byte(0x00, pass);
 		pc++;
 	} else
@@ -259,8 +259,8 @@ do_byte(char **p, int pass)
 	skip_white(p);
 	if (**p == '"') {
 		len = string_lit(p, buf, STR_LEN, 1);
-		emit_str(buf, (uint16_t)len, pass);
-		pc += (uint16_t)len;
+		emit_str(buf, len, pass);
+		pc += len;
 	} else if (**p == '\'') {
 		(*p)++;
 		if (**p == '\'')
@@ -272,7 +272,7 @@ do_byte(char **p, int pass)
 		if (**p != '\'')
 			error(ERR_CHREND, NULL);
 		len = 1;
-		emit_str(buf, (uint16_t)len, pass);
+		emit_str(buf, len, pass);
 
 		(*p)++;
 		pc++;
@@ -344,12 +344,24 @@ do_define(char **p, int pass)
 nodata:
 	v.v = 1;
 	SET_DEFINED(v);
-	SET_TYPE(v, TYPE_BYTE);
+
     }
 
     define_variable(id, v, 0);
 
     return NULL;
+}
+
+
+/* List the results of a .define directive. */
+static char *
+do_define_list(char *str)
+{
+    symbol_t *sym = sym_lookup(str, NULL);
+
+    sprintf(str, "= %s", sym_print(sym));
+
+    return str;
 }
 
 
@@ -444,10 +456,6 @@ do_else(char **p, int pass)
     else
 	error(ERR_ELSE, NULL);
 
-    /* If we are skipping, keep skipping! */
-//    if (! ifstate)
-//	newifstate = ifstate;
-
     return NULL;
 }
 
@@ -467,6 +475,8 @@ do_end(char **p, int pass)
 
 	/* Set the start address. */
 	sa = v.v;
+
+	output_start(sa, pass);
     }
 
     /*
@@ -483,6 +493,16 @@ do_end(char **p, int pass)
     found_end = 1;
 
     return NULL;
+}
+
+
+/* List the results of a .end directive. */
+static char *
+do_end_list(char *str)
+{
+    sprintf(str, "$= %06X", sa);
+
+    return str;
 }
 
 
@@ -515,6 +535,7 @@ do_endrep(char **p, int pass)
 	*p = rptstack[rptlevel - 1].pos;
 	line = rptstack[rptlevel - 1].line;
 	rptstack[rptlevel - 1].count--;
+	rptstack[rptlevel - 1].repeating = 1;
     } else
 	rptlevel--;
 
@@ -591,6 +612,16 @@ do_equ(char **p, int pass)
 }
 
 
+/* List the results of a .equ directive. */
+static char *
+do_equ_list(char *str)
+{
+    sprintf(str, "= %s", sym_print(current_label));
+
+    return str;
+}
+
+
 /* The ".fill <count> [,<data>]" directive. */
 static char *
 do_fill(char **p, int pass)
@@ -620,7 +651,6 @@ do_fill(char **p, int pass)
 
     /* Now "fill out" the space with bytes. */
     while (count--) {
-	//FIXME: not needed for ihex/srec output!
 	emit_byte(filler, pass);
 
 	pc++;
@@ -895,33 +925,23 @@ do_org(char **p, int pass)
     if ((pass == 2) && UNDEFINED(v))
 	error(ERR_UNDEF, NULL);
 
-    /*
-     * Optionally, "fill out" the space with $00 bytes.
-     *
-     * Note that we do NOT do this the first time the origin
-     * is changed (from being $0000) since that would not be
-     * sensible. We only do it if we change it on the fly.
-     */
-    if (opt_F) {
-	if (org_done) {
-		while (pc < v.v) {
-			//FIXME: not needed for ihex/srec output!
-			emit_byte(0x00, pass);
+    /* Set the new origin. */
+    org = pc = v.v;
 
-			pc++;
-		}
-	} else {
-		/* Remember our load address. */
-		emit_addr(v.v);
-
-		org_done = 1;
-	}
-    }
-
-    /* Now set the new origin. */
-    pc = v.v;
+    /* Remember our load address. */
+    output_addr(pc, pass);
 
     return NULL;
+}
+
+
+/* List the results of a .org directive. */
+static char *
+do_org_list(char *str)
+{
+    sprintf(str, "*= %06X", pc);
+
+    return str;
 }
 
 
@@ -1025,18 +1045,19 @@ do_repeat(char **p, int pass)
     if ((pass == 2) && UNDEFINED(v))
 		error(ERR_UNDEF, NULL);
 
-    /* Find next line to continue by .ENDREP. */
+    /* Find next line to continue by ENDREP. */
     pt = *p;
     skip_white_and_comment(p);
 
+    rptstack[rptlevel].repeating = 0;
     rptstack[rptlevel].count = v.v;
     rptstack[rptlevel].line = line + 1;
     rptstack[rptlevel].pos = *p;
     rptstack[rptlevel].file = filenames_idx;
-    rptlevel++;
 
-    newrptstate = (rptstack[rptlevel - 1].count > 0);
+    newrptstate = (rptstack[rptlevel].count > 0);
     rptstate = newrptstate;
+    rptlevel++;
 
     *p = pt;
 
@@ -1190,9 +1211,9 @@ do_word(char **p, int pass)
 	v = expr(p);
 	if ((pass == 2) && UNDEFINED(v))
 		error(ERR_UNDEF, NULL);
-	emit_word(v.v, pass);
-
+	emit_word(v.v & 0xffff, pass);
 	pc += 2;
+
 	skip_white(p);
 	if (**p == ',') {
 		skip_curr_and_white(p);
@@ -1205,54 +1226,54 @@ do_word(char **p, int pass)
 
 
 static const pseudo_t pseudos[] = {
-  { "ALIGN",	0, 0, do_align,		NULL },
-  { "ASCII",	0, 1, do_byte,		NULL },
-  { "ASCIIZ",	0, 1, do_asciz,		NULL },
-  { "ASCIZ",	0, 1, do_asciz,		NULL },
-  { "ASSERT",	0, 1, do_assert,	NULL },
-  { "BINARY",	0, 1, do_blob,		NULL },
-  { "BLOB",	0, 1, do_blob,		NULL },
-  { "BYTE",	0, 0, do_byte,		NULL },
-  { "CPU",	0, 1, do_cpu,		NULL },
-  { "DATA",	0, 1, do_byte,		NULL },
-  { "DB",	0, 0, do_byte,		NULL },
-  { "DEFINE",	0, 0, do_define,	NULL },
-  { "DL",	0, 0, do_dword,		NULL },
-  { "DS",	0, 0, do_fill,		NULL },
-  { "DW",	0, 0, do_word,		NULL },
-  { "DWORD",	0, 0, do_dword,		NULL },
-  { "ECHO",	0, 1, do_echo,		NULL },
-  { "ELSE",	1, 0, do_else,		NULL },
-  { "END",	0, 0, do_end,		NULL },
-  { "ENDIF",	1, 0, do_endif,		NULL },
-  { "ENDREP",	1, 0, do_endrep,	NULL },
-  { "EQU",	0, 0, do_equ,		NULL },
-  { "ERROR",	0, 1, do_error,		NULL },
-  { "FI",	1, 0, do_endif,		NULL },
-  { "FILL",	0, 1, do_fill,		NULL },
-  { "IF",	1, 0, do_if,		NULL },
-  { "IFDEF",	1, 0, do_ifdef,		NULL },
-  { "IFN",	1, 0, do_ifn,		NULL },
-  { "IFNDEF",	1, 0, do_ifndef,	NULL },
-  { "INCLUDE",	0, 0, do_include,	NULL },
-  { "ORG",	0, 0, do_org,		NULL },
-  { "PAGE",	0, 0, do_page,		NULL },
-  { "RADIX",	0, 0, do_radix,		NULL },
-  { "RADX",	0, 0, do_radix,		NULL },
-  { "REPEAT",	0, 0, do_repeat,	NULL },
-  { "SBTTL",	0, 0, do_subttl,	NULL },
-  { "STITLE",	0, 0, do_subttl,	NULL },
-  { "STR",	0, 1, do_byte,		NULL },
-  { "STRING",	0, 1, do_byte,		NULL },
-  { "SUBTTL",	0, 0, do_subttl,	NULL },
-  { "SYM",	0, 0, do_syms,		NULL },
-  { "SYMS",	0, 0, do_syms,		NULL },
-  { "TITLE",	0, 0, do_title,		NULL },
-  { "WARN",	0, 1, do_warn,		NULL },
-  { "WARNING",	0, 1, do_warn,		NULL },
-  { "WIDTH",	0, 0, do_width,		NULL },
-  { "WORD",	0, 0, do_word,		NULL },
-  { NULL				     }
+  { "ALIGN",	0, 0, do_align,		NULL		},
+  { "ASCII",	0, 1, do_byte,		NULL		},
+  { "ASCIIZ",	0, 1, do_asciz,		NULL		},
+  { "ASCIZ",	0, 1, do_asciz,		NULL		},
+  { "ASSERT",	0, 1, do_assert,	NULL		},
+  { "BINARY",	0, 1, do_blob,		NULL		},
+  { "BLOB",	0, 1, do_blob,		NULL		},
+  { "BYTE",	0, 0, do_byte,		NULL		},
+  { "CPU",	0, 1, do_cpu,		NULL		},
+  { "DATA",	0, 1, do_byte,		NULL		},
+  { "DB",	0, 0, do_byte,		NULL		},
+  { "DEFINE",	0, 0, do_define,	do_define_list	},
+  { "DL",	0, 0, do_dword,		NULL		},
+  { "DS",	0, 0, do_fill,		NULL		},
+  { "DW",	0, 0, do_word,		NULL		},
+  { "DWORD",	0, 0, do_dword,		NULL		},
+  { "ECHO",	0, 1, do_echo,		NULL		},
+  { "ELSE",	1, 0, do_else,		NULL		},
+  { "END",	0, 0, do_end,		do_end_list	},
+  { "ENDIF",	1, 0, do_endif,		NULL		},
+  { "ENDREP",	0, 0, do_endrep,	NULL		},
+  { "EQU",	0, 0, do_equ,		do_equ_list	},
+  { "ERROR",	0, 1, do_error,		NULL		},
+  { "FI",	1, 0, do_endif,		NULL		},
+  { "FILL",	0, 1, do_fill,		NULL		},
+  { "IF",	1, 0, do_if,		NULL		},
+  { "IFDEF",	1, 0, do_ifdef,		NULL		},
+  { "IFN",	1, 0, do_ifn,		NULL		},
+  { "IFNDEF",	1, 0, do_ifndef,	NULL		},
+  { "INCLUDE",	0, 0, do_include,	NULL		},
+  { "ORG",	0, 0, do_org,		do_org_list	},
+  { "PAGE",	0, 0, do_page,		NULL		},
+  { "RADIX",	0, 0, do_radix,		NULL		},
+  { "RADX",	0, 0, do_radix,		NULL		},
+  { "REPEAT",	0, 0, do_repeat,	NULL		},
+  { "SBTTL",	0, 0, do_subttl,	NULL		},
+  { "STITLE",	0, 0, do_subttl,	NULL		},
+  { "STR",	0, 1, do_byte,		NULL		},
+  { "STRING",	0, 1, do_byte,		NULL		},
+  { "SUBTTL",	0, 0, do_subttl,	NULL		},
+  { "SYM",	0, 0, do_syms,		NULL		},
+  { "SYMS",	0, 0, do_syms,		NULL		},
+  { "TITLE",	0, 0, do_title,		NULL		},
+  { "WARN",	0, 1, do_warn,		NULL		},
+  { "WARNING",	0, 1, do_warn,		NULL		},
+  { "WIDTH",	0, 0, do_width,		NULL		},
+  { "WORD",	0, 0, do_word,		NULL		},
+  { NULL				     		}
 };
 
 
@@ -1286,19 +1307,31 @@ is_pseudo(const char *name, int dot)
 
 
 char *
-pseudo(const pseudo_t *ptr, char **p, int pass)
+pseudo(const pseudo_t *op, char **p, int pass)
 {
     char *newp = NULL;
 
-    if (ptr == NULL)
+    if (op == NULL)
 	error(ERR_NODIRECTIVE, NULL);
 
-    if (ptr->always || ifstate)
-	newp = ptr->func(p, pass);
+    if (op->always || ifstate)
+	newp = op->func(p, pass);
 
     /* Just skip. */
     while (! IS_END(**p))
 	(*p)++;
 
     return newp;
+}
+
+
+char *
+pseudo_list(const struct pseudo *op, char *str)
+{
+    char *ret = NULL;
+
+    if (op != NULL && op->list != NULL && (op->always || ifstate))
+	ret = op->list(str);
+
+    return ret;
 }

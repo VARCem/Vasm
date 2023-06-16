@@ -8,7 +8,7 @@
  *
  *		Define the error codes.
  *
- * Version:	@(#)error.h	1.0.2	2023/05/13
+ * Version:	@(#)error.h	1.0.4	2023/06/05
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -44,7 +44,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING  IN ANY  WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef ERRORLOBAL_H
+#ifndef ERROR_H
 # define ERROR_H
 
 
@@ -55,6 +55,9 @@ typedef enum errors_e {
     ERR_CPU,			// "unknown processor type"
     ERR_MEM,			// "out of memory"
     ERR_ASSERT,			// "assert failed"
+    ERR_CREATE,			// "can not create file"
+    ERR_OPEN,			// "can not open file"
+    ERR_NO_FMT,			// "file format not enabled"
     ERR_NODIRECTIVE,		// "unknown directive"
     ERR_INSTR,			// "unknown instruction"
     ERR_COMMA,			// "comma expected"
@@ -64,9 +67,11 @@ typedef enum errors_e {
     ERR_OPER,			// "incomplete operator"
     ERR_UNBALANCED,		// "unbalanced parentheses"
     ERR_LABEL,			// "label required"
+    ERR_NOLABEL,		// "label not valid here"
     ERR_ID,			// "identifier expected"
     ERR_IDLEN,			// "identifier length exceeded"
-    ERR_STMT,			// "illegal statement"
+    ERR_STMT,			// "statement expected",
+    ERR_NOSTMT,			// "illegal statement"
     ERR_EOL,			// "end of line expected"
     ERR_REDEF,			// "illegal redefinition"
     ERR_IF,			// "IF nesting too deep"
@@ -89,9 +94,7 @@ typedef enum errors_e {
     ERR_CHR,			// "malformed character constant"
     ERR_STRLEN,			// "string too long"
     ERR_STR,			// "string expected"
-    ERR_OPEN,			// "can not open file"
     ERR_MAXINC,			// "maximum number of include files reached"
-    ERR_NO_FMT,			// "file format not enabled"
 
     ERR_MAXERR			// last generic error
 } errors_t;

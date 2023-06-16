@@ -8,7 +8,7 @@
  *
  *		Handle selection of a target device.
  *
- * Version:	@(#)target.c	1.0.4	2023/05/14
+ * Version:	@(#)target.c	1.0.5	2023/06/05
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -67,12 +67,17 @@ extern const target_t	t_6811;
 
 extern const target_t	t_1802;
 
+extern const target_t	t_scmp,
+			t_ins8060,
+			t_ins8070;
+
 extern const target_t	t_2650,
 			t_2650a,
 			t_2650b;
 
 
 static const target_t *targets[] = {
+#ifdef USE_MOS6502
     &t_6502_old,		// original MOS6502 (NMOS)
     &t_6502_nmos,		// standard MOS6502 (NMOS)
     &t_csg6510,			// CSG 6510 (NMOS)
@@ -81,6 +86,7 @@ static const target_t *targets[] = {
 //  &t_65c02,			// MOS 65C02 (CMOS)
     &t_r65c02,			// Rockwell 65C02 (CMOS)
     &t_w65c02,			// WDC 65C02 (CMOS)
+#endif
 
 #ifdef USE_MC6800
     &t_6800,			// MC6800/01/02
@@ -100,6 +106,12 @@ static const target_t *targets[] = {
 
 #ifdef USE_CDP1802
     &t_1802,			// CDP1802
+#endif
+
+#ifdef USE_SCMP
+    &t_scmp,			// NSC SC/MP
+    &t_ins8060,			// NSC INS8060
+    &t_ins8070,			// NSC INS807x
 #endif
 
 #ifdef USE_SCN2650

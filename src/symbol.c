@@ -8,7 +8,7 @@
  *
  *		Handle symbols.
  *
- * Version:	@(#)symbol.c	1.0.5	2023/05/12
+ * Version:	@(#)symbol.c	1.0.6	2023/06/15
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -107,12 +107,18 @@ symbol_t *
 sym_lookup(const char *name, symbol_t **table)
 {
     symbol_t *ptr;
+    int i;
 
     if (table == NULL)
 	table = &symbols;
 
     for (ptr = *table; ptr != NULL; ptr = ptr->next) {
-	if (! strcmp(name, ptr->name))
+	if (opt_C)
+		i = strcasecmp(name, ptr->name);
+	else
+		i = strcmp(name, ptr->name);
+
+	if (! i)
 		return ptr;
     }
 
@@ -168,7 +174,7 @@ sym_aquire(const char *name, symbol_t **table)
 
 
 symbol_t *
-define_label(const char *id, uint16_t v, symbol_t *parent, int force)
+define_label(const char *id, uint32_t val, symbol_t *parent, int force)
 {
     char nid[ID_LEN];
     symbol_t *sym;
@@ -191,16 +197,16 @@ define_label(const char *id, uint16_t v, symbol_t *parent, int force)
 	sym = sym_aquire(id, NULL);
 
     if (! force) {
-	if (IS_VAR(sym) || (DEFINED(sym->value) && (sym->value.v != v)))
+	if (IS_VAR(sym) || (DEFINED(sym->value) && (sym->value.v != val)))
 		error(parent ? ERR_LOCAL_REDEF : ERR_REDEF, id);
     }
 
     sym->kind = KIND_LBL;
     sym->filenr = filenames_idx;
     sym->linenr = line;
-    sym->value.v = v;
+    sym->value.v = val;
     sym->value.t = ((TYPE(sym->value) == TYPE_WORD)
-			? TYPE_WORD : NUM_TYPE(v)) | VALUE_DEFINED;
+			? TYPE_WORD : NUM_TYPE(val)) | VALUE_DEFINED;
 
     return sym;
 }
@@ -229,13 +235,6 @@ define_variable(const char *id, value_t v, int force)
 		SET_DEFINED(sym->value);
     } else
 	sym->value.t = v.t;
-
-#if 0
-//FIXME: we were set to KIND_VAR above..?
-    /* If previously defined as label make it word sized. */
-    if (IS_LBL(sym))
-	SET_TYPE(sym->value, TYPE_WORD);
-#endif
 }
 
 

@@ -8,7 +8,7 @@
  *
  *		Handle all functions.
  *
- * Version:	@(#)func.c	1.0.3	2023/04/26
+ * Version:	@(#)func.c	1.0.4	2023/06/15
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -111,10 +111,10 @@ do_sum(char **p)
      * between v1 (inclusive) and v2 (exclusive), using a
      * normal addition.
      */
-    if (code != NULL) {
+    if (output_buff != NULL) {
 	v2.v += v1.v;
 	while (v1.v < v2.v)
-		res.v += code[v1.v++ - code_base];
+		res.v += output_buff[v1.v++ - org];
     }
     SET_DEFINED(res);
 

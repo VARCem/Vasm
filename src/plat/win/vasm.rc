@@ -8,7 +8,7 @@
  *
  *		Application resource script for Windows.
  *
- * Version:	@(#)vasm.rc	1.0.2	2023/04/24
+ * Version:	@(#)vasm.rc	1.0.2	2023/05/16
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -45,10 +45,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <windows.h>
-#include "../version.h"
+#include "../../version.h"
 
 
-100		ICON		"win/varcem.ico"
+100		ICON		"varcem.ico"
 
 
 VS_VERSION_INFO VERSIONINFO
