@@ -98,8 +98,8 @@
 + implement all directives as pseudo's (i.e. make the . optional), many old
   sources need this.
 + OOps.. END was not really stopping the parser from processing input!
-- implement the '0xxH' notation for hex values.
-- implement the H'xx' notation for hex values.
++ implement the '0xxH' notation for hex values.
++ implement the H'xx' notation for hex values.
 + implement the 'stitle' and 'subttl' directives.
 + imported the REPEAT and ENDREP directives from upstream.
 / implement the 'width' directive and, maybe, line folding?

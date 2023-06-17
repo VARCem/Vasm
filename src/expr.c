@@ -8,7 +8,7 @@
  *
  *		General expression handler.
  *
- * Version:	@(#)expr.c	1.0.8	2023/06/15
+ * Version:	@(#)expr.c	1.0.9	2023/06/16
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -134,22 +134,42 @@ do_bin:
 
 	type = ((*p - pt) > 17) ? TYPE_DWORD : ((*p - pt) > 9) ? TYPE_WORD : NUM_TYPE(num.v);
     } else {
-	/* No explicit radix specifier present, go with the default. */
-	switch (radix) {
-		case 2:
-			goto do_bin;
+	/* Check if we have the '0xxH' form. */
+	while (isxdigit(**p))
+		(*p)++;
+	if (**p == 'H' || **p == 'h') {
+		/* We have this format. */
+		*p = pt;
 
-		case 8:
-			goto do_oct;
+		do {
+			num.v = (num.v << 4) + digit((*p)++);
+		} while (isxdigit(**p));
 
-		case 10:
-			goto do_dec;
+		if (**p != 'H' && **p != 'h')
+			error(ERR_NUM, NULL);
 
-		case 16:
-			goto do_hex;
+		(*p)++;
+		type = ((*p - pt) > 7) ? TYPE_DWORD : ((*p - pt) > 3) ? TYPE_WORD : NUM_TYPE(num.v);
+	} else {
+		*p = pt;
+
+		/* No explicit radix specifier present, go with the default. */
+		switch (radix) {
+			case 2:
+				goto do_bin;
+
+			case 8:
+				goto do_oct;
+
+			case 10:
+				goto do_dec;
+
+			case 16:
+				goto do_hex;
+		}
+
+		/*NOTREACHED*/
 	}
-
-	/*NOTREACHED*/
     }
 
     SET_TYPE(num, type);
@@ -292,6 +312,22 @@ program_counter:
 	if (**p != '\'')
 		error(ERR_CHR, NULL);
 	(*p)++;
+    } else if (**p == 'H' && (*p)[1] == '\'') {
+	/* Some assemblers use H'0E' for hex.. */
+	(*p)++; (*p)++;
+
+	if (! isxdigit(**p))
+		error(ERR_NUM, NULL);
+	do {
+		res.v = (res.v << 4) + digit((*p)++);
+	} while (isxdigit(**p));
+
+	/* Check for the closing quote! */
+	if (**p != '\'')
+		error(ERR_NUM, NULL);
+
+	(*p)++;
+	res.t = VALUE_DEFINED | NUM_TYPE(res.v);
     } else if (isalpha(**p)) {
 	/* Symbol reference. */
 	nident(p, id);
