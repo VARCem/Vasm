@@ -8,7 +8,7 @@
  *
  *		Handle any errors.
  *
- * Version:	@(#)error.c	1.0.4	2023/06/05
+ * Version:	@(#)error.c	1.0.5	2023/06/16
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -73,7 +73,7 @@ const char	*err_msgs[ERR_MAXERR] = {
     "assert failed",
     "can not create file",
     "can not open file",
-    "file format not enabled"
+    "file format not enabled",
     "unknown directive",
     "unknown instruction",
     "comma expected",
@@ -110,7 +110,7 @@ const char	*err_msgs[ERR_MAXERR] = {
     "malformed character constant",
     "string too long",
     "string expected",
-    "maximum number of include files reached",
+    "maximum number of include files reached"
 };
 
 

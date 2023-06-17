@@ -1,8 +1,11 @@
 # Local stuff
 .gitignore
+.git*
 .depends*
-foo*
 *.cmd
+*.sh
+foo*
+test*
 tests/
 
 # Prerequisites

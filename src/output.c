@@ -30,7 +30,11 @@
  *		(or the .NOFILL assembler directive) can be used to disable
  *		this behavior.
  *
- * Version:	@(#)output.c	1.0.5	2023/06/15
+ * FIXME:	We probably should merge the little/big endian functions
+ *		into one, and have the backends select the proper mode for
+ *		them at runtime.
+ *
+ * Version:	@(#)output.c	1.0.6	2023/06/16
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -204,7 +208,6 @@ output_open(const char *fn)
     char *p, *pfx, *s;
 
     /* Initialize. */
-    out_max = out_format = 0;
     out_orgdone = 0;
     out_file = NULL;
     output_buff = out_line = NULL;
@@ -232,12 +235,17 @@ output_open(const char *fn)
     if (p != NULL)
 	p++;
 
-again:
-    if ((p == NULL) || !strcasecmp(p, "bin")) {
-	if (p == NULL)
-		strcat(s, ".bin");
-	out_file = fopen(s, "wb");
-    } else if (!strcasecmp(p, "ihex") || !strcasecmp(p, "hex")) {
+    /* If no suffix at all, attach one. */
+    if (p == NULL) {
+	p = "bin";
+	strcat(s, ".bin");
+    }
+
+    /* But.. prefixes override a suffix. */
+    if (pfx != NULL)
+	p = pfx;
+
+    if (!strcasecmp(p, "ihex") || !strcasecmp(p, "hex")) {
 	out_max = IHEX_MAX;
 	out_format = 1;
 	out_file = fopen(s, "w");
@@ -246,25 +254,31 @@ again:
 	out_format = 2;
 	out_file = fopen(s, "w");
     } else {
-	if (pfx == NULL)
-		error(ERR_NO_FMT, p);
+	/* No known format name, assume raw-binary. */
+	out_max = out_format = 0;
+
+	/* If this was a prefix: we did not recognize it. */
+	if (p == pfx) {
+		fprintf(stderr, "Error: %s (%s)\n", err_msgs[ERR_NO_FMT], p);
+		return 0;
+	}
+
+	/* All good, create the file. */
+	out_file = fopen(s, "wb");
     }
 
-    /* Now check the prefix, which overrides any suffix. */
-    if (pfx != NULL) {
-	p = pfx;
-	pfx = NULL;
-	goto again;
+    if (out_file == NULL) {
+	fprintf(stderr, "Error: %s (%s)\n", err_msgs[ERR_CREATE], s);
+	return 0;
     }
-
-    if (out_file == NULL)
-	error(ERR_CREATE, s);
 
     /* Allocate line buffer if needed. */
     if (out_max > 0) {
 	out_line = malloc(out_max);
-	if (out_line == NULL)
-		error(ERR_MEM, "line buffer");
+	if (out_line == NULL) {
+		fprintf(stderr, "Error: %s (%s)\n", err_msgs[ERR_MEM], "line buffer");
+		return 0;
+	}
 	memset(out_line, 0x00, out_max);
     }
 

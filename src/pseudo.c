@@ -8,7 +8,7 @@
  *
  *		Handle directives and pseudo-ops.
  *
- * Version:	@(#)pseudo.c	1.0.7	2023/06/15
+ * Version:	@(#)pseudo.c	1.0.8	2023/06/16
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -912,6 +912,16 @@ do_include(char **p, int pass)
 }
 
 
+/* The ".nofill" directive. */
+static char *
+do_nofill(char **p, int pass)
+{
+    opt_F = 0;
+
+    return NULL;
+}
+
+
 /* The ".org <address>" directive. */
 static char *
 do_org(char **p, int pass)
@@ -1256,6 +1266,7 @@ static const pseudo_t pseudos[] = {
   { "IFN",	1, 0, do_ifn,		NULL		},
   { "IFNDEF",	1, 0, do_ifndef,	NULL		},
   { "INCLUDE",	0, 0, do_include,	NULL		},
+  { "NOFILL",	0, 0, do_nofill,	NULL		},
   { "ORG",	0, 0, do_org,		do_org_list	},
   { "PAGE",	0, 0, do_page,		NULL		},
   { "RADIX",	0, 0, do_radix,		NULL		},

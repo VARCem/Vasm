@@ -88,6 +88,7 @@
   implemented properly, we will have to re-work the "generating output" code
   to do it as it goes (in pass 2), and not only at the end of that pass. This
   allows such "jumping" to be handled by those file formats.
++ Added the NOFILL directive (same as -F on commandline.)
 + Added Motorola SRecord support for the 16-bit S19 format.
 - fix the sub-relative include path
   If one includes a "../foo/bar/bla.inc" file, and then that file also does

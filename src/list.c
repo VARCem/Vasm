@@ -8,7 +8,7 @@
  *
  *		Handle the listfile output.
  *
- * Version:	@(#)list.c	1.0.8	2023/06/15
+ * Version:	@(#)list.c	1.0.9	2023/06/16
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
