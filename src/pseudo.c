@@ -837,6 +837,7 @@ do_ifndef(char **p, int pass)
 static char *
 do_include(char **p, int pass)
 {
+    char path[1024], *pptr, *dptr;
     char filename[STR_LEN];
     char *ntext = NULL;
     size_t last_sz, last_off;
@@ -855,14 +856,28 @@ do_include(char **p, int pass)
 	error(ERR_EOL, NULL);
     skip_eol(p);
 
-    ntext = *p;
+    /* Create pathname based on parent path. */
+    pptr = filenames[filenames_idx];
+    for (dptr = path, i = 0; *pptr && i < sizeof(path) - 1; dptr++, i++) {
+	*dptr = *pptr++;
+	if (*dptr == '\\')
+		*dptr = '/';
+    }
+    *dptr = '\0';
+    if ((dptr = strrchr(path, '/')) == NULL)
+	dptr = path;
+    if (dptr != path)
+	*dptr++ = '/';
+    *dptr = '\0';
+    strcat(path, filename);
 
+    ntext = *p;
     if (pass == 1) {
 	/* Point at the first character of the line following the directive. */
 	last_off = (int)(*p - text);
 	last_sz = text_len - last_off;
 
-	size = file_size(filename);
+	size = file_size(path);
    
 	/* Calculate new source length and aquire memory. */
 	text_len = last_off + 1 + size + 1 + last_sz;
@@ -876,8 +891,8 @@ do_include(char **p, int pass)
 
 	/* Now read the new file into the buffer and terminate it. */
 	pos = last_off;
-	if (file_read_buf(filename, ntext + last_off) == 0)
-		error(ERR_OPEN, filename);
+	if (file_read_buf(path, ntext + last_off) == 0)
+		error(ERR_OPEN, path);
 	last_off += size;
 	ntext[last_off++] = EOF_CHAR;
 
@@ -901,7 +916,7 @@ do_include(char **p, int pass)
     filelines[filenames_idx + 2] = line + 1;
 
     /* Add this included file in the middle. */
-    filenames[filenames_idx + 1] = strdup(filename);
+    filenames[filenames_idx + 1] = strdup(path);
     filelines[filenames_idx + 1] = 1;
 
     /* We are now "in" the included file. */
