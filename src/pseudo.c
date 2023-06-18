@@ -8,7 +8,7 @@
  *
  *		Handle directives and pseudo-ops.
  *
- * Version:	@(#)pseudo.c	1.0.8	2023/06/16
+ * Version:	@(#)pseudo.c	1.0.9	2023/06/17
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -1194,7 +1194,8 @@ do_warn(char **p, int pass)
 	}
     } while (next);
 
-    printf("%s\n", buff);
+    if (opt_v || pass == 2)
+	printf("%s\n", buff);
 
     return NULL;
 }

@@ -8,7 +8,7 @@
  *
  *		Handle the listfile output.
  *
- * Version:	@(#)list.c	1.0.9	2023/06/16
+ * Version:	@(#)list.c	1.0.10	2023/06/17
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -72,8 +72,9 @@ static uint32_t	list_pc,
 		list_oc;
 static char	*list_title;
 static char	*list_subttl;
-static FILE	*list_file = NULL;
 static int	list_syms = 0;
+static FILE	*list_file = NULL;
+static char	list_path[1024];
 
 
 void
@@ -350,7 +351,7 @@ list_save(uint32_t pc)
 
 
 void
-list_close(void)
+list_close(int remov)
 {
     if (list_file != NULL) {
 	/* Reset printer to normal mode if needed. */
@@ -358,8 +359,10 @@ list_close(void)
 		fprintf(list_file, LIST_CHAR_DC2);
 
 	(void)fclose(list_file);
-
 	list_file = NULL;
+
+	if (remov)
+		remove(list_path);
     }
 }
 
@@ -367,27 +370,26 @@ list_close(void)
 int
 list_init(const char *fn)
 {
-    char name[1024];
     char *p;
 
     /* Copy the filename and see if we need to add a filename extension. */
-    strncpy(name, fn, sizeof(name) - 1);
-    p = strrchr(name, '/');
+    strncpy(list_path, fn, sizeof(list_path) - 1);
+    p = strrchr(list_path, '/');
 #ifdef _WIN32
     if (p == NULL)
-        p = strrchr(name, '\\');
+        p = strrchr(list_path, '\\');
 #endif
     if (p == NULL)
-        p = name;
+        p = list_path;
     p = strrchr(p, '.');
     if (p != NULL)
         p++;
     if (p == NULL) {
         /* No filename extension - use .lst as a default! */
-        strcat(name, ".lst");
+        strcat(list_path, ".lst");
     }
 
-    list_file = fopen(name, "w");
+    list_file = fopen(list_path, "w");
     if (list_file == NULL)
 	return 0;
 

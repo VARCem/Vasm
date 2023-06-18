@@ -120,3 +120,5 @@
 + Add -C option to allow for case-insensitivity of symbol names.
 - add symbol-table listing in numeric order.
 + cleaned up parser, added listing output for directives.
++ Do not display or generate output on errors.
++ Implemented the "{*,$,.} = value" constructs to set origin.

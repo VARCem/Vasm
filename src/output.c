@@ -34,7 +34,7 @@
  *		into one, and have the backends select the proper mode for
  *		them at runtime.
  *
- * Version:	@(#)output.c	1.0.6	2023/06/16
+ * Version:	@(#)output.c	1.0.6	2023/06/17
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -297,7 +297,7 @@ int
 output_close(int remov)
 {
     if (out_file == NULL)
-	return 0;
+	return -1;
 
     /* Flush any buffered data. */
     out_flush(1);

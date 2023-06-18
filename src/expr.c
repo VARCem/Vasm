@@ -8,7 +8,7 @@
  *
  *		General expression handler.
  *
- * Version:	@(#)expr.c	1.0.9	2023/06/16
+ * Version:	@(#)expr.c	1.0.10	2023/06/17
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -209,7 +209,7 @@ primary(char **p, int label)
     skip_white(p);
 
 #ifdef _DEBUG
-    if (opt_d)
+    if (opt_d > 1)
 	printf("> PRIMARY(%s)\n", dumpline(*p));
 #endif
     pt = *p;
@@ -378,7 +378,7 @@ product(char **p)
     char op, op2;
 
 #ifdef _DEBUG
-    if (opt_d)
+    if (opt_d > 1)
 	printf("PRODUCT(%s)\n", dumpline(*p));
 #endif
     res = primary(p, 1);
@@ -473,7 +473,7 @@ term(char **p)
     skip_white(p);
 
 #ifdef _DEBUG
-    if (opt_d)
+    if (opt_d > 1)
 	printf("TERM(%s)\n", dumpline(*p));
 #endif
     if (**p == '-') {		// indicate negative value
@@ -555,7 +555,7 @@ compare(char **p)
     char op, op2;
 
 #ifdef _DEBUG
-    if (opt_d)
+    if (opt_d > 1)
 	printf("COMPARE(%s)\n", dumpline(*p));
 #endif
     res = term(p); 
@@ -678,7 +678,7 @@ expr(char **p)
     skip_white(p);
 
 #ifdef _DEBUG
-    if (opt_d)
+    if (opt_d > 1)
 	printf("EXPR(%s)\n", dumpline(*p));
 #endif
 

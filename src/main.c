@@ -10,7 +10,7 @@
  *
  * Usage:	vasm [-dCFqsTvPV] [-p processor] [-l fn] [-o fn] [-Dsym[=val]] file ...
  *
- * Version:	@(#)main.c	1.0.10	2023/06/15
+ * Version:	@(#)main.c	1.0.11	2023/06/17
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -308,7 +308,7 @@ main(int argc, char *argv[])
     ttext = text;
     errors = pass(&ttext, 1);
     if (errors)
-	goto ret1;
+	goto ret2;
 
     /* Perform Pass 2. */
     ttext = text;
@@ -320,7 +320,7 @@ main(int argc, char *argv[])
     list_symbols();
 
 ret2:
-    list_close();
+    list_close(errors);
 
 ret1:
 //    if (text != NULL)
@@ -329,11 +329,12 @@ ret1:
     sym_free(NULL);
 
 ret0:
-    if ((c = output_close(errors)) <= 0) {
-	fprintf(stderr, "error writing output file %s\n", out_name);
+    if ((c = output_close(errors)) < 0) {
+	if (! errors)
+		fprintf(stderr, "error writing output file %s\n", out_name);
 	errors = 1;
     } else {
-	if (! opt_q)
+	if (!opt_q && !errors)
 		printf("Generated %i bytes of output.\n", c);
     }
 

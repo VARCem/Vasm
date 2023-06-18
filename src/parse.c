@@ -8,7 +8,7 @@
  *
  *		Parse the source input, process it, and generate output.
  *
- * Version:	@(#)parse.c	1.0.10	2023/06/15
+ * Version:	@(#)parse.c	1.0.11	2023/06/17
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -242,6 +242,11 @@ statement(char **p, int pass)
     char id[ID_LEN], id2[ID_LEN], *pt;
     int label = 0, local = 0;
 
+#ifdef _DEBUG
+    if (opt_d)
+	printf("<< '%s'\n", dumpline(*p));
+#endif
+
     skip_white_and_comment(p);
     if (IS_END(**p))
 	return NULL;
@@ -400,7 +405,7 @@ statement(char **p, int pass)
     pt = *p;
     nident_upcase(p, id);
     if ((psop = is_pseudo(id, 0)) != NULL) {
-	/* All good, we're a directive. */
+	/* All good, we are. */
 	skip_white(p);
 	return pseudo(psop, p, pass);
     }

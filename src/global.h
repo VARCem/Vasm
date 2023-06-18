@@ -8,7 +8,7 @@
  *
  *		Definitions for the entire application.
  *
- * Version:	@(#)global.h	1.0.10	2023/06/15
+ * Version:	@(#)global.h	1.0.11	2023/06/17
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -240,7 +240,7 @@ extern void		list_set_head(const char *);
 extern void		list_set_head_sub(const char *);
 extern void		list_set_syms(int);
 extern int		list_init(const char *);
-extern void		list_close(void);
+extern void		list_close(int);
 extern void		list_line(const char *);
 extern void		list_page(const char *, const char *);
 extern void		list_save(uint32_t);
