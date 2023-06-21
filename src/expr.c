@@ -312,8 +312,8 @@ program_counter:
 	if (**p != '\'')
 		error(ERR_CHR, NULL);
 	(*p)++;
-    } else if (**p == 'H' && (*p)[1] == '\'') {
-	/* Some assemblers use H'0E' for hex.. */
+    } else if ((**p == 'H' || **p == 'X') && (*p)[1] == '\'') {
+	/* Some assemblers use H'0E' or X'0E' for hex.. */
 	(*p)++; (*p)++;
 
 	if (! isxdigit(**p))
@@ -323,10 +323,9 @@ program_counter:
 	} while (isxdigit(**p));
 
 	/* Check for the closing quote! */
-	if (**p != '\'')
-		error(ERR_NUM, NULL);
+	if (**p == '\'')
+		(*p)++;
 
-	(*p)++;
 	res.t = VALUE_DEFINED | NUM_TYPE(res.v);
     } else if (isalpha(**p)) {
 	/* Symbol reference. */
@@ -625,6 +624,97 @@ compare(char **p)
 }
 
 
+/*
+ * We implement these operators:
+ *
+ * <	LSB (take low byte of operand)
+ * >	MSB (take high byte of operand)
+ * !	NOT (logical) (also "NOT" keyword)
+ * ~	NOT (bit-wise)
+ * [b]	BYTE (convert operand to byte if possible)
+ * [!b]	BYTECAST (cast operand to byte)
+ * [w]	WORD (convert operand to word if possible)
+ * [!w]	WORDCAST (cast operand to word)
+ *
+ * here.
+ */
+value_t
+expr(char **p)
+{
+    value_t res;
+    char op;
+
+    skip_white(p);
+
+#ifdef _DEBUG
+    if (opt_d > 1)
+	printf("EXPR(%s)\n", dumpline(*p));
+#endif
+
+    op = **p;
+    if (op == '>') {
+	/* High-byte (MSB) operator. */
+	(*p)++;
+	res = compare(p);
+	res.v = (res.v >> 8) & 0xff;
+	SET_TYPE(res, TYPE_BYTE);
+    } else if (op == '<') {
+	/* Low-byte (LSB) operator. */
+	(*p)++;
+	res = compare(p);
+	res.v = res.v & 0xff;
+	SET_TYPE(res, TYPE_BYTE);
+    } else if ((op == '!') || starts_with(*p, "NOT ")) {
+	/* Logical NOT operators. */
+	if (op == '!')
+		(*p)++;
+	else
+		*p += 4;
+	res = term(p);
+	res.v = !res.v;
+    } else if (op == '~') {
+	/* Bitwise NOT (complement) operator. */
+	(*p)++;
+	res = term(p);
+	res.v = ~res.v;
+    } else if (starts_with(*p, "[b]")) {
+	/* Lossless conversion to byte. */
+	*p += 3;
+	res = to_byte(compare(p), 0);
+    } else if (starts_with(*p, "[!b]")) {
+	/* Forced conversion to byte. */
+	*p += 4;
+#if 1
+	res = to_byte(expr(p), 1);		// convert entire expression
+#else
+	res = to_byte(compare(p), 1);
+#endif
+    } else if (starts_with(*p, "[d]")) {
+	/* Lossless conversion to doubleword. */
+	*p += 3;
+	res = compare(p);
+	SET_TYPE(res, TYPE_DWORD);
+    } else if (starts_with(*p, "[w]")) {
+	/* Lossless conversion to word. */
+	*p += 3;
+	res = to_word(compare(p), 0);
+    } else if (starts_with(*p, "[!w]")) {
+	/* Forced conversion to word. */
+	*p += 4;
+#if 1
+	res = to_word(expr(p), 1);		// convert entire expression
+#else
+	res = to_word(compare(p), 1);
+#endif
+    } else {
+	/* Iterate. */
+	res = compare(p);
+    }
+
+    return res;
+}
+
+
 /* Take a value and try to convert it to a byte value. */
 value_t
 to_byte(value_t v, int force)
@@ -650,97 +740,6 @@ to_word(value_t v, int force)
 	error(ERR_RNG_WORD, NULL);
 
     SET_TYPE(v, TYPE_WORD);
-
-    return v;
-}
-
-
-/*
- * We implement these operators:
- *
- * <	LSB (take low byte of operand)
- * >	MSB (take high byte of operand)
- * !	NOT (logical) (also "NOT" keyword)
- * ~	NOT (bit-wise)
- * [b]	BYTE (convert operand to byte if possible)
- * [!b]	BYTECAST (cast operand to byte)
- * [w]	WORD (convert operand to word if possible)
- * [!w]	WORDCAST (cast operand to word)
- *
- * here.
- */
-value_t
-expr(char **p)
-{
-    value_t v;
-    char op;
-
-    skip_white(p);
-
-#ifdef _DEBUG
-    if (opt_d > 1)
-	printf("EXPR(%s)\n", dumpline(*p));
-#endif
-
-    op = **p;
-    if (op == '>') {
-	/* High-byte (MSB) operator. */
-	(*p)++;
-	v = compare(p);
-	v.v = (v.v >> 8) & 0xff;
-	SET_TYPE(v, TYPE_BYTE);
-    } else if (op == '<') {
-	/* Low-byte (LSB) operator. */
-	(*p)++;
-	v = compare(p);
-	v.v = v.v & 0xff;
-	SET_TYPE(v, TYPE_BYTE);
-    } else if ((op == '!') || starts_with(*p, "NOT ")) {
-	/* Logical NOT operators. */
-	if (op == '!')
-		(*p)++;
-	else
-		*p += 4;
-	v = term(p);
-	v.v = !v.v;
-    } else if (op == '~') {
-	/* Bitwise NOT (complement) operator. */
-	(*p)++;
-	v = term(p);
-	v.v = ~v.v;
-    } else if (starts_with(*p, "[b]")) {
-	/* Lossless conversion to byte. */
-	*p += 3;
-	v = to_byte(compare(p), 0);
-    } else if (starts_with(*p, "[!b]")) {
-	/* Forced conversion to byte. */
-	*p += 4;
-#if 1
-	v = to_byte(expr(p), 1);		// convert entire expression
-#else
-	v = to_byte(compare(p), 1);
-#endif
-    } else if (starts_with(*p, "[d]")) {
-	/* Lossless conversion to doubleword. */
-	*p += 3;
-	v = compare(p);
-	SET_TYPE(v, TYPE_DWORD);
-    } else if (starts_with(*p, "[w]")) {
-	/* Lossless conversion to word. */
-	*p += 3;
-	v = to_word(compare(p), 0);
-    } else if (starts_with(*p, "[!w]")) {
-	/* Forced conversion to word. */
-	*p += 4;
-#if 1
-	v = to_word(expr(p), 1);		// convert entire expression
-#else
-	v = to_word(compare(p), 1);
-#endif
-    } else {
-	/* Iterate. */
-	v = compare(p);
-    }
 
     return v;
 }

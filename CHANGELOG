@@ -120,5 +120,13 @@
 + Add -C option to allow for case-insensitivity of symbol names.
 - add symbol-table listing in numeric order.
 + cleaned up parser, added listing output for directives.
++ Re-wrote output module to properly implement binary, ihex and srec
+  formats; update operation of the .ORG directive.
 + Do not display or generate output on errors.
 + Implemented the "{*,$,.} = value" constructs to set origin.
++ Updated -P commandline option; one adds FF to listings, second
+  adds SO/SI to listing (compressed format for matrix printers.)
++ finalized initial SC/MP backend.
++ implement the X'xx' notation for hex values.
++ implemented the '.LOCAL' directive (mainly for SC/MP.)
++ fixed .PAGE to check for illegal values.

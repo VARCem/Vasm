@@ -8,7 +8,7 @@
  *
  *		Handle the listfile output.
  *
- * Version:	@(#)list.c	1.0.10	2023/06/17
+ * Version:	@(#)list.c	1.0.11	2023/06/20
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -139,7 +139,7 @@ list_page(const char *head, const char *sub)
 	head = list_title;
 
     /* Initialize printer to condensed mode if width > 80. */
-    if (opt_P && list_pnr == 0 && list_pwidth > 80) {
+    if (opt_P > 1 && list_pnr == 0 && list_pwidth > 80) {
 	fprintf(list_file, LIST_CHAR_SI);
     }
 
@@ -153,7 +153,7 @@ list_page(const char *head, const char *sub)
 
     sprintf(page, "%s    Page %i", date, list_pnr);
     skip = list_pwidth - (strlen(myname) + 1 + strlen(version) + strlen(page));
-    if (list_pnr > 1) {
+    if (opt_P && list_pnr > 1) {
 	/* Insert a form-feed for all but first page. */
 	sprintf(ptr, "%s", LIST_CHAR_FF);
 	ptr += strlen(ptr);

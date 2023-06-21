@@ -8,7 +8,7 @@
  *
  *		Define the error codes.
  *
- * Version:	@(#)error.h	1.0.4	2023/06/05
+ * Version:	@(#)error.h	1.0.5	2023/06/20
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -62,6 +62,7 @@ typedef enum errors_e {
     ERR_INSTR,			// "unknown instruction"
     ERR_COMMA,			// "comma expected"
     ERR_NUM,			// "value expected"
+    ERR_VALUE,			// "invalid value"
     ERR_FMT,			// "invalid format specifier"
     ERR_EXPR,			// "error in expression"
     ERR_OPER,			// "incomplete operator"

@@ -8,7 +8,7 @@
  *
  *		Handle any errors.
  *
- * Version:	@(#)error.c	1.0.5	2023/06/16
+ * Version:	@(#)error.c	1.0.6	2023/06/20
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -78,6 +78,7 @@ const char	*err_msgs[ERR_MAXERR] = {
     "unknown instruction",
     "comma expected",
     "value expected",
+    "invalid value",
     "invalid format specifier",
     "error in expression",
     "incomplete operator",

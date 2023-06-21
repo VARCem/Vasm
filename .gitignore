@@ -6,7 +6,8 @@
 *.sh
 foo*
 test*
-tests/
+tests/*
+src/tests/*
 
 # Prerequisites
 *.d

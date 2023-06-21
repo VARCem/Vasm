@@ -10,7 +10,7 @@
  *
  * Usage:	vasm [-dCFqsTvPV] [-p processor] [-l fn] [-o fn] [-Dsym[=val]] file ...
  *
- * Version:	@(#)main.c	1.0.11	2023/06/17
+ * Version:	@(#)main.c	1.0.11	2023/06/19
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -212,7 +212,7 @@ main(int argc, char *argv[])
 		break;
 
 	case 'd':	// debug mode (disabled)
-		opt_d ^= 1;
+		opt_d++;
 		break;
 
 	case 'F':	// auto-fill for .org (enabled)
@@ -228,7 +228,7 @@ main(int argc, char *argv[])
 		break;
 
 	case 'P':	// enable Printer mode
-		opt_P ^= 1;
+		opt_P++;
 		break;
 
 	case 'p':	// processor name
@@ -308,21 +308,20 @@ main(int argc, char *argv[])
     ttext = text;
     errors = pass(&ttext, 1);
     if (errors)
-	goto ret2;
+	goto ret1;
 
     /* Perform Pass 2. */
     ttext = text;
     errors = pass(&ttext, 2);
     if (errors)
-	goto ret2;
+	goto ret1;
 
     /* Dump the symbols, if enabled. */
     list_symbols();
 
-ret2:
+ret1:
     list_close(errors);
 
-ret1:
 //    if (text != NULL)
 //	free(text);
 

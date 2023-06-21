@@ -922,7 +922,7 @@ t_instr(const target_t *trg, char **p, int pass)
     /* First get instruction for given mnemonic. */
     op = get_mnemonic((const opcode_t *)trg->priv, trg->priv2, id);
     if (op == NULL)
-	error(ERR_INSTR, NULL);
+	error(ERR_INSTR, id);
 
     /* Make sure we are allowed to use this instruction. */
     if (op->cpu > trg->flags)

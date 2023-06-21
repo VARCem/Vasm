@@ -8,7 +8,7 @@
  *
  *		Handle directives and pseudo-ops.
  *
- * Version:	@(#)pseudo.c	1.0.9	2023/06/17
+ * Version:	@(#)pseudo.c	1.0.10	2023/06/19
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -927,6 +927,16 @@ do_include(char **p, int pass)
 }
 
 
+/* The ".local" directive. */
+static char *
+do_local(char **p, int pass)
+{
+    auto_local = -1;
+
+    return NULL;
+}
+
+
 /* The ".nofill" directive. */
 static char *
 do_nofill(char **p, int pass)
@@ -992,6 +1002,8 @@ do_page(char **p, int pass)
 
 	/* Set the new number of lines per page. */
 	list_plength = (int)v.v;
+	if (list_plength < 66)
+		error(ERR_VALUE, NULL);
     }
 
     if (**p == ',') {
@@ -1005,6 +1017,8 @@ do_page(char **p, int pass)
 
 	/* Set the new number of characters per line. */
 	list_pwidth = (int)v.v;
+	if (list_pwidth < 80)
+		error(ERR_VALUE, NULL);
     }
 
     return NULL;
@@ -1282,6 +1296,7 @@ static const pseudo_t pseudos[] = {
   { "IFN",	1, 0, do_ifn,		NULL		},
   { "IFNDEF",	1, 0, do_ifndef,	NULL		},
   { "INCLUDE",	0, 0, do_include,	NULL		},
+  { "LOCAL",	0, 1, do_local,		NULL		},
   { "NOFILL",	0, 0, do_nofill,	NULL		},
   { "ORG",	0, 0, do_org,		do_org_list	},
   { "PAGE",	0, 0, do_page,		NULL		},

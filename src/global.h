@@ -8,7 +8,7 @@
  *
  *		Definitions for the entire application.
  *
- * Version:	@(#)global.h	1.0.11	2023/06/17
+ * Version:	@(#)global.h	1.0.12	2023/06/19
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -154,22 +154,23 @@ extern uint32_t		org,
 			pc,
 			sa;
 extern int		line,
-			newline,
-			found_end;
+			newline;
+extern int8_t		radix,
+			found_end,
+			auto_local;
 extern symbol_t		*current_label;
-extern int8_t		radix;
 extern const struct pseudo *psop;
-extern int		iflevel,
+extern int8_t		iflevel,
 			ifstate,
 			newifstate,
 			ifstack[];
-extern int		rptlevel,
+extern int8_t		rptlevel,
 			rptstate,
 			newrptstate;
 extern repeat_t		rptstack[];
 extern char		*filenames[];
 extern int		filelines[];
-extern int		filenames_idx,
+extern int8_t		filenames_idx,
 			filenames_len;
 
 extern uint32_t		output_size;

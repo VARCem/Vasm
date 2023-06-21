@@ -8,7 +8,7 @@
  *
  *		Parse the source input, process it, and generate output.
  *
- * Version:	@(#)parse.c	1.0.11	2023/06/17
+ * Version:	@(#)parse.c	1.0.12	2023/06/19
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -59,15 +59,16 @@
 
 
 int		line,			// currently processed line number
-		newline,		// next line to be processed
-		found_end;		// END directive was found
-symbol_t	*current_label = NULL;	// search scope for local labels
-int8_t		radix;			// current numerical radix
+		newline;		// next line to be processed
+int8_t		radix,			// current numerical radix
+		found_end,		// END directive was found
+		auto_local;		// state for creating locals
+symbol_t	*current_label;		// search scope for local labels
 const struct pseudo *psop;		// current pseudo/directive
-int		iflevel,		// current level of conditionals
+int8_t		iflevel,		// current level of conditionals
 		ifstate, newifstate,	// current conditional state
 		ifstack[MAX_IFLEVEL];
-int		rptlevel,
+int8_t		rptlevel,
 		rptstate, newrptstate;
 repeat_t	rptstack[MAX_RPTLEVEL];
 
@@ -243,7 +244,7 @@ statement(char **p, int pass)
     int label = 0, local = 0;
 
 #ifdef _DEBUG
-    if (opt_d)
+    if ((opt_d && opt_v && pass == 1) || (opt_d && pass == 2))
 	printf("<< '%s'\n", dumpline(*p));
 #endif
 
@@ -299,15 +300,36 @@ statement(char **p, int pass)
 		if (IS_END(**p) && !label)
 			error(ERR_STMT, NULL);
 
-		/* Locals can only be "within" a global. */
-		if (local && current_label == NULL)
-			error(ERR_NO_GLOBAL, NULL);
+		if (local) {
+			/* Locals can only be "within" a global. */
+			if (current_label == NULL)
+				error(ERR_NO_GLOBAL, NULL);
 
-		/* Either way, define this label. */
-		if (local)
 			define_label(id, pc, current_label, 1);
-		else
-			current_label = define_label(id, pc, NULL, 1);
+		} else {
+			/*
+			 * If auto_local is set, create this label as
+			 * a new context for local labels by setting
+			 * the current_label variable to it.
+			 *
+			 * However, is auto_local is negative (meaning
+			 * we used the .LOCAL directive), "increase"
+			 * it to 0, which disables it, effectively
+			 * doing a one-shot.
+			 */
+			if (auto_local) {
+				current_label = define_label(id, pc, NULL, 1);
+				if (auto_local < 0)
+					auto_local++;
+			} else {
+				/*
+				 * If auto_local is not set, create the
+				 * label as usual, but do NOT start a new
+				 * context for locals.
+				 */
+				(void)define_label(id, pc, NULL, 1);
+			}
+		}
 	}
     } else {
 	/* No identifier/label present, so restore line pointer. */
@@ -321,6 +343,35 @@ statement(char **p, int pass)
     if (IS_END(**p)) {
 	/* Just a label. */
 	return NULL;
+    }
+
+    if (**p == '*' || **p == '$' || **p == '.') {
+	/*
+	 * Support statements like "*=$400" and such.
+	 * These are effectively EQU statements towards the
+	 * PC, so, should be considered to be ORG statements.
+	 */
+	pt = *p;
+	(*p)++;
+
+	/* Skip any space or comment. */
+	skip_white_and_comment(p);
+
+	if (**p == '=') {
+		/* We got one! */
+		(*p)++;
+
+		/* Skip any space or comment. */
+		skip_white_and_comment(p);
+
+		/* Pretend to be an ORG directive. */
+		psop = is_pseudo("ORG", 0);
+		(void)pseudo(psop, p, pass);
+		return NULL;
+	}
+
+	/* Not found, so restore line pointer. */
+	*p = pt;
     }
 
     if (**p == EQUAL_CHAR) {
@@ -450,6 +501,7 @@ pass(char **p, int pass)
     errors = 0;
     found_end = 0;
     line = 1;
+    auto_local = 1;
     current_label = NULL;
     radix = RADIX_DEFAULT;
     filenames_idx = 0;

@@ -11,7 +11,7 @@
  *		the "fread" function on text files) to properly read data
  *		from them when opened as a text file.
  *
- * Version:	@(#)input.c	1.0.4	2023/04/26
+ * Version:	@(#)input.c	1.0.5	2023/06/20
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -74,8 +74,8 @@ int	text_len;			// total length of the source
  */
 char	*filenames[MAX_FILENAMES];
 int	filelines[MAX_FILENAMES];
-int	filenames_idx;
-int	filenames_len;
+int8_t	filenames_idx,
+	filenames_len;
 
 
 /* Determine the "cooked" size (in characters) of a text file. */
