@@ -1,5 +1,5 @@
 /*
- * VASM		VARCem Multi-Target Assembler.
+ * VASM		VARCem Multi-Target Macro Assembler.
  *		A simple table-driven assembler for several 8-bit target
  *		devices, like the 6502, 6800, 80x, Z80 et al series. The
  *		code originated from Bernd B”ckmann's "asm6502" project.
@@ -8,7 +8,7 @@
  *
  *		Handle the listfile output.
  *
- * Version:	@(#)list.c	1.0.11	2023/06/20
+ * Version:	@(#)list.c	1.0.12	2023/06/23
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -252,7 +252,7 @@ list_line(const char *p)
     while (count--)
 	fputc(' ', list_file);
 
-    fprintf(list_file, "%6i%c ", line, ifstate ? ':' : '-');
+    fprintf(list_file, "%6i%c ", line, maclevel ? 'M' : ifstate ? ':' : '-');
 
     if (p != NULL) {
 	while (*p && *p != '\n' && *p != EOF_CHAR)
@@ -305,12 +305,16 @@ list_symbols(void)
 		list_page("** SYMBOL TABLE **", NULL);
 
 	fprintf(fp, "%-32s %c ", sym->name, sym_type(sym));
-	if (DEFINED(sym->value)) {
+ 	if (IS_MAC(sym)) {
+		fprintf(fp, "           ");
+		goto do_macro;
+	} else if (DEFINED(sym->value)) {
 		fprintf(fp, "%9s ", value_print(sym->value));
 		if (IS_VAR(sym))
 			fprintf(fp, "%c", value_type(sym->value));
-		else
+		else if (IS_LBL(sym))
 			fprintf(fp, " ");
+do_macro:
 		fprintf(fp, "        ");
 		if (sym->linenr < 0)
 			fprintf(fp, "-builtin-");

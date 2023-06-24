@@ -1,5 +1,5 @@
 /*
- * VASM		VARCem Multi-Target Assembler.
+ * VASM		VARCem Multi-Target Macro Assembler.
  *		A simple table-driven assembler for several 8-bit target
  *		devices, like the 6502, 6800, 80x, Z80 et al series. The
  *		code originated from Bernd B”ckmann's "asm6502" project.
@@ -8,7 +8,7 @@
  *
  *		Handle directives and pseudo-ops.
  *
- * Version:	@(#)pseudo.c	1.0.10	2023/06/19
+ * Version:	@(#)pseudo.c	1.0.10	2023/06/23
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -1286,6 +1286,9 @@ static const pseudo_t pseudos[] = {
   { "ELSE",	1, 0, do_else,		NULL		},
   { "END",	0, 0, do_end,		do_end_list	},
   { "ENDIF",	1, 0, do_endif,		NULL		},
+  { "ENDM",	2, 0, do_endm,		NULL		},
+  { "ENDMAC",	2, 0, do_endm,		NULL		},
+  { "ENDMACRO",	2, 0, do_endm,		NULL		},
   { "ENDREP",	0, 0, do_endrep,	NULL		},
   { "EQU",	0, 0, do_equ,		do_equ_list	},
   { "ERROR",	0, 1, do_error,		NULL		},
@@ -1297,6 +1300,7 @@ static const pseudo_t pseudos[] = {
   { "IFNDEF",	1, 0, do_ifndef,	NULL		},
   { "INCLUDE",	0, 0, do_include,	NULL		},
   { "LOCAL",	0, 1, do_local,		NULL		},
+  { "MACRO",	0, 0, do_macro,		NULL		},
   { "NOFILL",	0, 0, do_nofill,	NULL		},
   { "ORG",	0, 0, do_org,		do_org_list	},
   { "PAGE",	0, 0, do_page,		NULL		},
@@ -1304,6 +1308,7 @@ static const pseudo_t pseudos[] = {
   { "RADX",	0, 0, do_radix,		NULL		},
   { "REPEAT",	0, 0, do_repeat,	NULL		},
   { "SBTTL",	0, 0, do_subttl,	NULL		},
+  { "SET",	0, 0, do_equ,		do_equ_list	},
   { "STITLE",	0, 0, do_subttl,	NULL		},
   { "STR",	0, 1, do_byte,		NULL		},
   { "STRING",	0, 1, do_byte,		NULL		},
@@ -1319,6 +1324,7 @@ static const pseudo_t pseudos[] = {
 };
 
 
+/* Check if this is a pseudo-instruction or directive. */
 const pseudo_t *
 is_pseudo(const char *name, int dot)
 {
@@ -1348,6 +1354,7 @@ is_pseudo(const char *name, int dot)
 }
 
 
+/* Execute a pseudo-instruction or directive. */
 char *
 pseudo(const pseudo_t *op, char **p, int pass)
 {
@@ -1356,7 +1363,8 @@ pseudo(const pseudo_t *op, char **p, int pass)
     if (op == NULL)
 	error(ERR_NODIRECTIVE, NULL);
 
-    if (op->always || ifstate)
+    if ((ifstate && macstate && op->always == 2) ||
+	(!macstate && (op->always || ifstate)))
 	newp = op->func(p, pass);
 
     /* Just skip. */
@@ -1367,6 +1375,7 @@ pseudo(const pseudo_t *op, char **p, int pass)
 }
 
 
+/* Handle list output for a pseudo, if available. */
 char *
 pseudo_list(const struct pseudo *op, char *str)
 {

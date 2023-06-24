@@ -1,5 +1,5 @@
 /*
- * VASM		VARCem Multi-Target Assembler.
+ * VASM		VARCem Multi-Target Macro Assembler.
  *		A simple table-driven assembler for several 8-bit target
  *		devices, like the 6502, 6800, 80x, Z80 et al series. The
  *		code originated from Bernd B”ckmann's "asm6502" project.
@@ -8,7 +8,7 @@
  *
  *		Define application version and build info.
  *
- * Version:	@(#)version.h	1.0.8	2023/06/20
+ * Version:	@(#)version.h	1.0.9	2023/06/21
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -50,12 +50,12 @@
 
 /* Application name. */
 #define APP_NAME	"VARCem VASM"
-#define APP_TITLE	"VARCem Multi-Target Assembler"
+#define APP_TITLE	"VARCem Multi-Target Macro Assembler"
 
 /* Version info. */
 #define APP_VER_MAJOR	1
 #define APP_VER_MINOR	0
-#define APP_VER_REV	17
+#define APP_VER_REV	18
 #define APP_VER_PATCH	0
 
 

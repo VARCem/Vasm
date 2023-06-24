@@ -1,5 +1,5 @@
 /*
- * VASM		VARCem Multi-Target Assembler.
+ * VASM		VARCem Multi-Target Macro Assembler.
  *		A simple table-driven assembler for several 8-bit target
  *		devices, like the 6502, 6800, 80x, Z80 et al series. The
  *		code originated from Bernd B”ckmann's "asm6502" project.
@@ -8,7 +8,7 @@
  *
  *		Handle symbols.
  *
- * Version:	@(#)symbol.c	1.0.6	2023/06/15
+ * Version:	@(#)symbol.c	1.0.7	2023/06/21
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -135,6 +135,9 @@ sym_type(const symbol_t *sym)
 
 	case KIND_VAR:
 		return 'V';
+
+	case KIND_MAC:
+		return 'M';
     }
 
     return '-';

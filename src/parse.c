@@ -1,5 +1,5 @@
 /*
- * VASM		VARCem Multi-Target Assembler.
+ * VASM		VARCem Multi-Target Macro Assembler.
  *		A simple table-driven assembler for several 8-bit target
  *		devices, like the 6502, 6800, 80x, Z80 et al series. The
  *		code originated from Bernd B”ckmann's "asm6502" project.
@@ -8,7 +8,7 @@
  *
  *		Parse the source input, process it, and generate output.
  *
- * Version:	@(#)parse.c	1.0.12	2023/06/19
+ * Version:	@(#)parse.c	1.0.12	2023/06/23
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -238,23 +238,32 @@ nident_upcase(char **p, char *id)
 
 /* Processes one statement or assembler instruction. */
 static char *
-statement(char **p, int pass)
+statement(char **p, char **newptr, int pass)
 {
-    char id[ID_LEN], id2[ID_LEN], *pt;
-    int label = 0, local = 0;
+    char id[ID_LEN], id2[ID_LEN];
+    char *pt, *macpt = *p;
+    int label, local;
 
 #ifdef _DEBUG
     if ((opt_d && opt_v && pass == 1) || (opt_d && pass == 2))
 	printf("<< '%s'\n", dumpline(*p));
 #endif
 
+    /* Skip any space or comment. */
     skip_white_and_comment(p);
     if (IS_END(**p))
 	return NULL;
 
-    /* First check for variable or label definition. */
+    /* Clear local variables. */
     memset(id, 0x00, sizeof(id));
+    label = local = 0;
+
+    /* Save current pointer, we may need it later. */
     pt = *p;
+
+    /* If we are defining a macro, do not process labels. */
+    if (macstate)
+	goto nomacro1;
 
     /* Local labels can start with a digit. */
     if (**p == ALPHA_CHAR) {
@@ -263,10 +272,12 @@ statement(char **p, int pass)
 		error(ERR_ID, NULL);
 
 	nident(p, id);
+	label = 1;
 	local = 1;
     } else if (isalpha(**p)) {
 	/* But regular identifiers must start with an alpha. */
 	ident(p, id);
+	label = 1;
     }
 
     /*
@@ -276,18 +287,18 @@ statement(char **p, int pass)
      */
     if (**p == COLON_CHAR) {
 	(*p)++;
-	label = 1;
+	label++;
     }
 
     /* Skip any space or comment. */
     skip_white_and_comment(p);
 
-    if (label ||
-	(id[0] != '\0' && !trg_instr_ok(id) && (is_pseudo(id, 0) == NULL))) {
+    if ((label == 2) ||
+	(!macro_ok(id) && (is_pseudo(id, 0) == NULL) && !trg_instr_ok(id))) {
 	/*
-	 * This is either a forced label (because it has a
-	 * colon at the end), or it is a regular identifier
-	 * and it is NOT an instruction or pseudo.
+	 * This is either a forced label (because it has a colon at
+	 * the end), or it is a regular identifier and it is NOT an
+	 * instruction, pseudo or macro.
 	 */
 	if (ifstate) {
 		/*
@@ -297,7 +308,7 @@ statement(char **p, int pass)
 		 * with a colon.) Otherwise, they will be seen
 		 * as (probably unused) label symbols...
 		 */
-		if (IS_END(**p) && !label)
+		if (IS_END(**p) && (label != 2))
 			error(ERR_STMT, NULL);
 
 		if (local) {
@@ -334,9 +345,6 @@ statement(char **p, int pass)
     } else {
 	/* No identifier/label present, so restore line pointer. */
 	*p = pt;
-
-	/* Skip any space or comment. */
-	skip_white_and_comment(p);
     }
 
     /* Bail out if EOL. */
@@ -376,7 +384,7 @@ statement(char **p, int pass)
 
     if (**p == EQUAL_CHAR) {
 	/* Cannot use a label as a target for EQU, check for that. */
-	if (label)
+	if (label == 2)
 		error(ERR_NOLABEL, NULL);
 	(*p)++;
 
@@ -386,17 +394,26 @@ statement(char **p, int pass)
 	return NULL;
     }
 
+nomacro1:
     /* Check for directive or instruction. */
     while (**p == DOT_CHAR) {
 	/* Local label or directive. */
 	pt = *p;
 	(*p)++;
 	nident_upcase(p, id);
-	if ((psop = is_pseudo(id, 1)) != NULL) {
+	if ((psop = is_pseudo(id, 1+(2*macstate))) != NULL) {
+		/* If we are defining a macro, add this line to the macro. */
+		if (macstate)
+			macro_add(macpt);
+
 		/* All good, we're a directive. */
 		skip_white(p);
 		return pseudo(psop, p, pass);
 	}
+
+	/* If we are defining a macro, do not process labels. */
+	if (macstate)
+		goto nomacro2;
 
 	/*
 	 * This is a "dot label", which is a "shorthand" version
@@ -452,16 +469,31 @@ statement(char **p, int pass)
 	 */
     }
 
+nomacro2:
     /* Check if this is a pseudo (directive without the dot.) */
     pt = *p;
     nident_upcase(p, id);
-    if ((psop = is_pseudo(id, 0)) != NULL) {
+    if ((psop = is_pseudo(id, 0+(2*macstate))) != NULL) {
+	/* If we are defining a macro, add this line to the macro. */
+	if (macstate)
+		macro_add(macpt);
+
 	/* All good, we are. */
 	skip_white(p);
 	return pseudo(psop, p, pass);
     }
 
-    /* No pseudo either, must be a (processor) mnemonic then. */
+    if (macstate)
+	goto nomacro3;
+
+    /* No pseudo, see if it is a macro being called. */
+    skip_white(p);
+    if (macro_ok(id)) {
+	macro_exec(id, p, newptr, pass);
+	return NULL;
+    }
+
+    /* No macro either, must be a (processor) mnemonic then. */
     *p = pt;
 
     skip_white_and_comment(p);
@@ -482,6 +514,11 @@ statement(char **p, int pass)
 		error(ERR_NOSTMT, NULL);
     }
 
+nomacro3:
+    /* If we are defining a macro, add this line to the macro. */
+    if (macstate)
+	macro_add(macpt);
+
     /* Skip all trailing stuff. */
     while (! IS_END(**p))
 	(*p)++;
@@ -494,9 +531,12 @@ int
 pass(char **p, int pass)
 {
     const char *msg;
-    char *newtext;
+    char *newtext, *newp;
     char *list;
     int err;
+
+    if (opt_v)
+	printf("Pass %i:\n", pass);
 
     errors = 0;
     found_end = 0;
@@ -511,6 +551,8 @@ pass(char **p, int pass)
     rptlevel = 0;
     rptstate = 0;
     memset(rptstack, 0x00, sizeof(rptstack));
+    maclevel = 0;
+    macstate = 0;
 
     pc = 0;
     output_reset();
@@ -519,17 +561,21 @@ pass(char **p, int pass)
     list_set_head_sub(NULL);
     list_save(pc);
 
+    macro_reset();
+
     if ((err = setjmp(error_jmp)) == 0) {
 	while (p && **p) {
 		/* Initialize per-line variables. */
 		psop = NULL;
+		newp = NULL;
 		list = *p;
 		newline = line + 1;
 		newifstate = ifstate;
 		newrptstate = rptstate;
+		newmacstate = macstate;
 
 		/* Parse the current line. */
-		newtext = statement(p, pass);
+		newtext = statement(p, &newp, pass);
 
 		/* Skip any trailing space/comment until newline. */
 		skip_white_and_comment(p);
@@ -540,13 +586,19 @@ pass(char **p, int pass)
 			list_line(list);
 
 		/* Update our state. */
+		macstate = newmacstate;
 		ifstate = newifstate;
 		rptstate = newrptstate;
-		if (!rptstate || !rptstack[rptlevel].repeating)
-			line = newline;
 
 		/* OK, skip into the next line. */
 		skip_eol(p);
+		if (**p == ETX_CHAR) {
+			/* Skip the EOM.. */
+			(*p)++;
+
+			/* Close macro and jump back into source. */
+			macro_close(p);
+		}
 		if (**p == EOF_CHAR) {
 			/* Skip the EOF.. */
 			(*p)++;
@@ -567,12 +619,24 @@ next_file:
 			p = NULL;
 		}
 
-		/* The "include" directive may have changed "text" on us! */
+		/* Source of input may have changed on us! */
+		if (newp != NULL) {
+			*p = newp;
+			newp = NULL;
+			maclevel++;
+		}
 		if (newtext != NULL)
 			text = newtext;
 
+		if (!maclevel && (!rptstate || !rptstack[rptlevel].repeating))
+			line = newline;
+
 		list_save(pc);
 	}
+
+	/* Make sure we have matched MACRO..ENDM at the end. */
+	if (maclevel > 0)
+		error(ERR_ENDM, "** end of input**");
 
 	/* Make sure we have matched IF..ENDIF at the end. */
 	if (iflevel > 0)

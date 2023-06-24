@@ -1,14 +1,14 @@
 #
-# VARCem	Virtual ARchaeological Computer EMulator.
-#		An emulator of (mostly) x86-based PC systems and devices,
-#		using the ISA,EISA,VLB,MCA  and PCI system buses, roughly
-#		spanning the era between 1981 and 1995.
+# VASM		VARCem Multi-Target Macro Assembler.
+#		A simple table-driven assembler for several 8-bit target
+#		devices, like the 6502, 6800, 80x, Z80 et al series. The
+#		code originated from Bernd B”ckmann's "asm6502" project.
 #
 #		This file is part of the VARCem Project.
 #
 #		Makefile for Windows using Visual Studio 2019.
 #
-# Version:	@(#)Makefile.MSVC	1.2.0	2023/06/05
+# Version:	@(#)Makefile.MSVC	1.2.0	2023/06/23
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -291,7 +291,7 @@ PROG		:= vasm.exe
 SYSOBJ		:= vasm.res getopt.obj
 OBJ		:= $(SYSOBJ) \
 		   main.obj error.obj symbol.obj expr.obj func.obj input.obj \
-		   output.obj list.obj parse.obj pseudo.obj \
+		   macro.obj output.obj list.obj parse.obj pseudo.obj \
 		   target.obj \
 		    $(TARGETS)
 LDLIBS		+= #advapi32.lib shell32.lib user32.lib kernel32.lib winmm.lib

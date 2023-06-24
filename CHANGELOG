@@ -130,3 +130,9 @@
 + implement the X'xx' notation for hex values.
 + implemented the '.LOCAL' directive (mainly for SC/MP.)
 + fixed .PAGE to check for illegal values.
+- We currently do not allow labels to have the same name as a pseudo
+  or machine instruction. This is not OK for an actual label, but maybe
+  it should be OK for a variable with an EQU/= ?
++ Fixed issue in output.c (not resetting orgdone per pass.)
++ Implemented SET directive (alias to .EQU)
++ Implemented macros using the .MACRO .. .ENDM directives.

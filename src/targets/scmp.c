@@ -1,5 +1,5 @@
 /*
- * VASM		VARCem Multi-Target Assembler.
+ * VASM		VARCem Multi-Target Macro Assembler.
  *		A simple table-driven assembler for several 8-bit target
  *		devices, like the 6502, 6800, 80x, Z80 et al series. The
  *		code originated from Bernd B”ckmann's "asm6502" project.
@@ -117,6 +117,7 @@ static const opcode_t opcodes[] = {
     { "DAE",	CPU_0,	0x68,	GRP_IMP		},
     { "DAI",	CPU_0,	0xec,	GRP_IMM		},
     { "DINT",	CPU_0,	0x04,	GRP_IMP		},
+    { "DIV",	CPU_B,	0x0d,	GRP_IMP		},
     { "DLD",	CPU_0,	0xb8,	GRP_REL		},
     { "DLY",	CPU_0,	0x8f,	GRP_IMM		},
     { "HALT",	CPU_0,	0x00,	GRP_IMP		},
@@ -130,6 +131,7 @@ static const opcode_t opcodes[] = {
     { "LD",	CPU_0,	0xc0,	GRP_MEM		},
     { "LDE",	CPU_0,	0x40,	GRP_IMP		},
     { "LDI",	CPU_0,	0xc4,	GRP_IMM		},
+    { "MPY",	CPU_B,	0x2c,	GRP_IMP		},
     { "NOP",	CPU_0,	0x08,	GRP_IMP		},
     { "OR",	CPU_0,	0xd8,	GRP_MEM		},
     { "ORE",	CPU_0,	0x58,	GRP_IMP		},
@@ -138,10 +140,12 @@ static const opcode_t opcodes[] = {
     { "RRL",	CPU_0,	0x1f,	GRP_IMP		},
     { "SCL",	CPU_0,	0x03,	GRP_IMP		},
     { "SIO",	CPU_0,	0x19,	GRP_IMP		},
-    { "SR",	CPU_0,	0x1c,	GRP_IMP		},
-    { "SRL",	CPU_0,	0x1d,	GRP_IMP		},
+    { "SR",	CPU_0,	0x1c,	GRP_IMP		},	// 3C,0C
+    { "SRL",	CPU_0,	0x1d,	GRP_IMP		},	// 3D
     { "ST",	CPU_0,	0xc8,	GRP_MEM		},
+    { "SUB",	CPU_B,	0xf8,	GRP_MEM		},
     { "XAE",	CPU_0,	0x01,	GRP_IMP		},
+    { "XCH",	CPU_B,	0x01,	GRP_IMP		},	// 01,4D,4E,4F
     { "XOR",	CPU_0,	0xe0,	GRP_MEM		},
     { "XPAH",	CPU_0,	0x34,	GRP_PTR		},
     { "XPAL",	CPU_0,	0x30,	GRP_PTR		},

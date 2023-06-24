@@ -1,5 +1,5 @@
 #
-# VASM		VARCem Multi-Target Assembler.
+# VASM		VARCem Multi-Target Macro Assembler.
 #		A simple table-driven assembler for several 8-bit target
 #		devices, like the 6502, 6800, 80x, Z80 et al series. The
 #		code originated from Bernd Bckmann's "asm6502" project.
@@ -8,7 +8,7 @@
 #
 #		Makefile for macOS systems using the Xcode environment.
 #
-# Version:	@(#)Makefile.mac	1.2.0	2023/06/05
+# Version:	@(#)Makefile.mac	1.2.0	2023/06/23
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -50,7 +50,7 @@ ifndef ARCH
 endif
 
 ifndef DEBUG
- DEBUG		:= y
+ DEBUG		:= n
 endif
 
 
@@ -227,7 +227,7 @@ PROG		:= vasm
 SYSOBJ		:=
 OBJ		:= $(SYSOBJ) \
 		   main.o error.o symbol.o expr.o func.o input.o \
-		   output.o list.o parse.o pseudo.o \
+		   macro.o output.o list.o parse.o pseudo.o \
 		   target.o \
 		    $(TARGETS)
 

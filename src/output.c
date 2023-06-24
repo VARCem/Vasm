@@ -1,5 +1,5 @@
 /*
- * VASM		VARCem Multi-Target Assembler.
+ * VASM		VARCem Multi-Target Macro Assembler.
  *		A simple table-driven assembler for several 8-bit target
  *		devices, like the 6502, 6800, 80x, Z80 et al series. The
  *		code originated from Bernd B”ckmann's "asm6502" project.
@@ -34,7 +34,7 @@
  *		into one, and have the backends select the proper mode for
  *		them at runtime.
  *
- * Version:	@(#)output.c	1.0.6	2023/06/17
+ * Version:	@(#)output.c	1.0.7	2023/06/23
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -330,6 +330,7 @@ void
 output_reset(void)
 {
     out_base = 0;
+    out_orgdone = 0;
 
     if (output_size > 0) {
 	/* This is Pass 2, allocate buffer. */

@@ -1,5 +1,5 @@
 /*
- * VASM		VARCem Multi-Target Assembler.
+ * VASM		VARCem Multi-Target Macro Assembler.
  *		A simple table-driven assembler for several 8-bit target
  *		devices, like the 6502, 6800, 80x, Z80 et al series. The
  *		code originated from Bernd B”ckmann's "asm6502" project.
@@ -8,7 +8,7 @@
  *
  *		Definitions for the entire application.
  *
- * Version:	@(#)global.h	1.0.12	2023/06/19
+ * Version:	@(#)global.h	1.0.13	2023/06/23
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -50,7 +50,8 @@
 
 #define COMMENT_CHAR	';'		// starts a comment (until EOL)
 #define DOT_CHAR	'.'		// starts a directive or local label
-#define EOF_CHAR	0x1a
+#define ETX_CHAR	0x03		// indicates end of macro text
+#define EOF_CHAR	0x1a		// indicates end of source text
 #define EQUAL_CHAR	'='		// indicates variable assignment
 #define COLON_CHAR	':'		// marks a label
 #define ALPHA_CHAR	'@'		// marks a local label
@@ -62,7 +63,8 @@
 #define FMT_HEX1_CHAR	'x'		// specifies hex format (C style)
 #define FMT_HEX2_CHAR	'X'		// specifies hex format (C style)
 
-#define IS_EOL(c)	(((c) == EOF_CHAR) || ((c) == '\n') || ((c) == '\r'))
+#define IS_EOL(c)	(((c) == ETX_CHAR) || ((c) == EOF_CHAR) || \
+			 ((c) == '\n') || ((c) == '\r'))
 #define IS_END(c)	((!(c)) || IS_EOL((c)))
 #define IS_SPACE(c)	(((c) == '\t') || ((c) == ' '))
 #define IS_IDENT(c)	(((c) == DOT_CHAR) || ((c) == '_'))
@@ -115,6 +117,7 @@ typedef struct sym_ {
     uint8_t	kind;			// is it a label or a variable?
 #define KIND_LBL 1
 #define KIND_VAR 2
+#define KIND_MAC 4
     uint8_t	pass;			// defined in which pass?
     short	filenr;			// in which file was it defined?
     int		linenr;			// on what line in that file?
@@ -125,6 +128,7 @@ typedef struct sym_ {
 /* Symbol-specific directives. */
 #define IS_LBL(x) (((x)->kind & KIND_LBL) != 0)
 #define IS_VAR(x) (((x)->kind & KIND_VAR) != 0)
+#define IS_MAC(x) (((x)->kind & KIND_MAC) != 0)
 
 struct pseudo;
 
@@ -178,6 +182,10 @@ extern uint8_t		*output_buff;
 
 extern int		list_plength,
 			list_pwidth;
+
+extern int		macstate,
+			newmacstate,
+			maclevel;
 
 
 #if defined(_WIN32) && defined(_MSC_VER)
@@ -246,6 +254,14 @@ extern void		list_line(const char *);
 extern void		list_page(const char *, const char *);
 extern void		list_save(uint32_t);
 extern void		list_symbols(void);
+
+extern void		macro_reset(void);
+extern int		macro_ok(const char *);
+extern void		macro_add(const char *);
+extern void		macro_exec(const char *, char **, char **, int);
+extern void		macro_close(char **);
+extern char		*do_macro(char **, int);
+extern char		*do_endm(char **, int);
 
 extern const struct pseudo	*is_pseudo(const char *, int);
 extern char		*pseudo(const struct pseudo *, char **, int);

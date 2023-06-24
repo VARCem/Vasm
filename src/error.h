@@ -1,5 +1,5 @@
 /*
- * VASM		VARCem Multi-Target Assembler.
+ * VASM		VARCem Multi-Target Macro Assembler.
  *		A simple table-driven assembler for several 8-bit target
  *		devices, like the 6502, 6800, 80x, Z80 et al series. The
  *		code originated from Bernd B”ckmann's "asm6502" project.
@@ -8,7 +8,7 @@
  *
  *		Define the error codes.
  *
- * Version:	@(#)error.h	1.0.5	2023/06/20
+ * Version:	@(#)error.h	1.0.6	2023/06/23
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -75,6 +75,10 @@ typedef enum errors_e {
     ERR_NOSTMT,			// "illegal statement"
     ERR_EOL,			// "end of line expected"
     ERR_REDEF,			// "illegal redefinition"
+    ERR_MACACT,			// "not enough actual params"
+    ERR_MACFRM,			// "not enough formal params"
+    ERR_MACRO,			// "MACRO before ENDM",
+    ERR_ENDM,			// "ENDM before MACRO",
     ERR_IF,			// "IF nesting too deep"
     ERR_ELSE,			// "ELSE without IF"
     ERR_ENDIF,			// "ENDIF without IF"
