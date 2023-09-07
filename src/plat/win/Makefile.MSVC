@@ -8,7 +8,7 @@
 #
 #		Makefile for Windows using Visual Studio 2019.
 #
-# Version:	@(#)Makefile.MSVC	1.2.0	2023/06/23
+# Version:	@(#)Makefile.MSVC	1.2.0	2023/08/20
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -110,7 +110,7 @@ ifndef SCMP
 endif
 ifeq ($(SCMP), y)
  DEFS		+= -DUSE_SCMP
- TARGETS	+= scmp.obj
+ TARGETS	+= ins8060.obj
 endif
 
 ifndef SCN2650

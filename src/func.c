@@ -8,7 +8,7 @@
  *
  *		Handle all functions.
  *
- * Version:	@(#)func.c	1.0.4	2023/06/15
+ * Version:	@(#)func.c	1.0.5	2023/08/20
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -79,9 +79,46 @@ do_def(char **p)
 	sym->value.t = TYPE_BYTE;
 	sym->value.v = 0;
     }
-    res = sym->value;
     if (IS_END(**p))
 	error(ERR_EOL, NULL);
+
+    res = sym->value;
+
+    return res;
+}
+
+
+/* Implement the "HI(symbol)" function. */
+static value_t
+do_high(char **p)
+{
+    value_t res;
+
+    res = expr(p);
+    if (IS_END(**p))
+	error(ERR_EOL, NULL);
+
+    res.v = (res.v >> 8) & 0xff;
+    res.t = TYPE_BYTE;
+    SET_DEFINED(res);
+
+    return res;
+}
+
+
+/* Implement the "LO(symbol)" function. */
+static value_t
+do_low(char **p)
+{
+    value_t res;
+
+    res = expr(p);
+    if (IS_END(**p))
+	error(ERR_EOL, NULL);
+
+    res.v = (res.v & 0xff);
+    res.t = TYPE_BYTE;
+    SET_DEFINED(res);
 
     return res;
 }
@@ -125,6 +162,10 @@ do_sum(char **p)
 static const func_t functions[] = {
   { "DEF",	do_def		},
   { "DEFINED",	do_def		},
+  { "H",	do_high		},
+  { "HI",	do_high		},
+  { "L",	do_low		},
+  { "LO",	do_low		},
   { "SUM",	do_sum		},
   { NULL			}
 };

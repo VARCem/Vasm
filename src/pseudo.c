@@ -8,7 +8,7 @@
  *
  *		Handle directives and pseudo-ops.
  *
- * Version:	@(#)pseudo.c	1.0.10	2023/06/23
+ * Version:	@(#)pseudo.c	1.0.10	2023/06/24
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -92,6 +92,26 @@ string_lit(char **p, char *buf, int bufsize, int quot)
 	(*p)++;
 
     return (int)(buf - start);
+}
+
+
+/* The ".addr <expr>" directive. */
+static char *
+do_addr(char **p, int pass)
+{
+    value_t v;
+
+    v = expr(p);
+    if ((pass == 2) && UNDEFINED(v))
+	error(ERR_UNDEF, NULL);
+
+    /* Decrement one, but mind the mod-4096 stuff. */
+    v.v = (v.v & ~0x0fff) | ((v.v & 0x0fff) - 1);
+
+    emit_word_be(v.v & 0xffff, pass);
+    pc += 2;
+
+    return NULL;
 }
 
 
@@ -1265,7 +1285,36 @@ do_word(char **p, int pass)
 }
 
 
+/* The ".wordbe <data>[,<data>,...]" directive. */
+static char *
+do_wordbe(char **p, int pass)
+{
+    value_t v;
+    int next;
+
+    do {
+	next = 0;
+	skip_white(p);
+
+	v = expr(p);
+	if ((pass == 2) && UNDEFINED(v))
+		error(ERR_UNDEF, NULL);
+	emit_word_be(v.v & 0xffff, pass);
+	pc += 2;
+
+	skip_white(p);
+	if (**p == ',') {
+		skip_curr_and_white(p);
+		next = 1;
+	}
+    } while (next);
+
+    return NULL;
+}
+
+
 static const pseudo_t pseudos[] = {
+  { "ADDR",	0, 1, do_addr,		NULL		},	// SC/MP
   { "ALIGN",	0, 0, do_align,		NULL		},
   { "ASCII",	0, 1, do_byte,		NULL		},
   { "ASCIIZ",	0, 1, do_asciz,		NULL		},
@@ -1277,6 +1326,7 @@ static const pseudo_t pseudos[] = {
   { "CPU",	0, 1, do_cpu,		NULL		},
   { "DATA",	0, 1, do_byte,		NULL		},
   { "DB",	0, 0, do_byte,		NULL		},
+  { "DBYTE",	0, 0, do_wordbe,	NULL		},	// SC/MP
   { "DEFINE",	0, 0, do_define,	do_define_list	},
   { "DL",	0, 0, do_dword,		NULL		},
   { "DS",	0, 0, do_fill,		NULL		},
@@ -1299,7 +1349,7 @@ static const pseudo_t pseudos[] = {
   { "IFN",	1, 0, do_ifn,		NULL		},
   { "IFNDEF",	1, 0, do_ifndef,	NULL		},
   { "INCLUDE",	0, 0, do_include,	NULL		},
-  { "LOCAL",	0, 1, do_local,		NULL		},
+  { "LOCAL",	0, 1, do_local,		NULL		},	// SC/MP
   { "MACRO",	0, 0, do_macro,		NULL		},
   { "NOFILL",	0, 0, do_nofill,	NULL		},
   { "ORG",	0, 0, do_org,		do_org_list	},
@@ -1320,6 +1370,7 @@ static const pseudo_t pseudos[] = {
   { "WARNING",	0, 1, do_warn,		NULL		},
   { "WIDTH",	0, 0, do_width,		NULL		},
   { "WORD",	0, 0, do_word,		NULL		},
+  { "WORDBE",	0, 0, do_wordbe,	NULL		},
   { NULL				     		}
 };
 

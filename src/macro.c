@@ -8,7 +8,7 @@
  *
  *		Handle macros.
  *
- * Version:	@(#)macro.c	1.0.1	2023/06/23
+ * Version:	@(#)macro.c	1.0.1	2023/08/20
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -195,10 +195,12 @@ macro_add(const char *p)
 
     while (*xx && (*xx == ' ' || *xx == '\t'))
 	xx++;
+    if (*xx == '.')
+	xx++;
 # ifdef _MSC_VER
-    if (!strncmp(xx, ".endm", 5) || !strncmp(xx, ".ENDM", 5))
+    if (!strncmp(xx, "endm", 4) || !strncmp(xx, "ENDM", 4))
 # else
-    if (!strncasecmp(xx, ".endm", 5))
+    if (!strncasecmp(xx, "endm", 4))
 # endif
 	return;
 #endif
@@ -238,11 +240,19 @@ macro_exec(const char *name, char **p, char **newp, int pass)
 	return;
     curmac = m;
 
-    /* Save actual parameters. */
+    /* Save actual parameters, but do not keep comments. */
     sp = curmac->actual;
     while (! IS_END(**p)) {
-	*sp++ = **p;
-	(*p)++;
+	if (**p != COMMENT_CHAR) {
+		*sp++ = **p;
+		(*p)++;
+	} else {
+		/* See if we can remove trailing whitespace. */
+		while (IS_SPACE(*(sp-1)))
+			*(--sp) = '\0';
+
+		skip_white_and_comment(p);
+	}
     }
     *sp = '\0';
 
@@ -263,9 +273,11 @@ macro_exec(const char *name, char **p, char **newp, int pass)
 		*sp++ = *curmac->defptr;
 	} while (*curmac->defptr && *curmac->defptr++ != '\n');
 	*sp = '\0';
+//printf("ORIG: '%s'\n", temp);
 
 	/* Expand the copy. */
 	subst(curmac, temp);
+//printf("EXP: '%s'\n", temp);
 
 	/* Copy expanded line to data. */
 	sp = temp;

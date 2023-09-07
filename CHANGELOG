@@ -136,3 +136,5 @@
 + Fixed issue in output.c (not resetting orgdone per pass.)
 + Implemented SET directive (alias to .EQU)
 + Implemented macros using the .MACRO .. .ENDM directives.
++ Implemented .ADDR,.DBYTE directives (for SC/MP.)
++ Implemented functions H(), HI(), L() and LO() for expressions.

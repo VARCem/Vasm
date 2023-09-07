@@ -21,7 +21,7 @@
  *		less power. Other than instruction timings, everything else
  *		was the same, so for code, nothing changed.
  *
- * Version:	@(#)scmp.c	1.0.1	2023/06/19
+ * Version:	@(#)ins8060.c	1.0.2	2023/09/06
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -67,6 +67,10 @@
 #include "../target.h"
 
 
+#define USE_JS		0	// include "JS" pseudo
+#define USE_LDPI	0	// include "LDPI" pseudo
+
+
 typedef enum {
     GRP_IMP = 0,		// implied
     GRP_IMM,			// $12
@@ -74,6 +78,7 @@ typedef enum {
     GRP_REL,			// relative (disp) or pointer disp(ptr)
     GRP_MEM,			// relative,auto-ptr @disp(ptr)
     GRP_JS,			// JS pseudo
+    GRP_LDPI,			// LDPI pseudo
     GRP_ABS			// $1234 (807x models)
 } trg_groups_t;
 
@@ -126,11 +131,16 @@ static const opcode_t opcodes[] = {
     { "JMP",	CPU_0,	0x90,	GRP_REL		},
     { "JNZ",	CPU_0,	0x9c,	GRP_REL		},
     { "JP",	CPU_0,	0x94,	GRP_REL		},
+#if USE_JS
     { "JS",	CPU_0,	0xff,	GRP_JS		},
+#endif
     { "JZ",	CPU_0,	0x98,	GRP_REL		},
     { "LD",	CPU_0,	0xc0,	GRP_MEM		},
     { "LDE",	CPU_0,	0x40,	GRP_IMP		},
     { "LDI",	CPU_0,	0xc4,	GRP_IMM		},
+#if USE_LDPI
+    { "LDPI",	CPU_0,	0xff,	GRP_LDPI	},
+#endif
     { "MPY",	CPU_B,	0x2c,	GRP_IMP		},
     { "NOP",	CPU_0,	0x08,	GRP_IMP		},
     { "OR",	CPU_0,	0xd8,	GRP_MEM		},
@@ -190,11 +200,12 @@ get_ptr(char **p)
 }
 
 
+static int foo = 0;
 static int
 get_ea(uint16_t addr, int pass)
 {
-    uint16_t pct, off;
-    int16_t disp;
+    uint16_t pct;
+    int16_t disp, off;
 
     /* Sign-extend the (12-bit) target if needed. */
     if (addr & 0x0800)
@@ -202,16 +213,19 @@ get_ea(uint16_t addr, int pass)
     disp = (int16_t)addr;
 
     pct = pc + 1;
-    off = disp - pct;
+    if (disp >= pct) {
+	off = (disp - pct);
 
-    if (pass == 2) {
-	if (disp >= pct) {
-		if (off > 0x7f)
-			error(ERR_RELRNG, NULL);
-	} else {
-		if (off < 0x80)
-			error(ERR_RELRNG, NULL);
-	}
+	if (pass == 2 && off > 128)
+		error(ERR_RELRNG, NULL);
+    } else {
+	if (disp > 0)
+		off = -(pct - disp);
+	else
+		off = (disp - pct);
+
+	if (pass == 2 && off < -127)
+		error(ERR_RELRNG, NULL);
     }
 
     return off;
@@ -332,6 +346,11 @@ grp_rel(char **p, int pass, const opcode_t *instr)
 	(*p)++;
     }
 
+    if (instr->opcode != 0xa8 && instr->opcode != 0xb8)
+foo = 1;
+else
+foo = 0;
+
     if (ptr == 0)
 	off = get_ea((uint16_t)v.v, pass);
     else
@@ -417,6 +436,7 @@ grp_mem(char **p, int pass, const opcode_t *instr)
 }
 
 
+#if USE_JS
 /*
  * Handle the JS pseudo.
  *
@@ -471,6 +491,59 @@ grp_js(char **p, int pass, const opcode_t *instr)
 
     return 7;
 }
+#endif
+
+
+#if USE_LDPI
+/*
+ * Handle the LDPI pseudo.
+ *
+ *   LDPI  ptr,expr
+ *
+ * Generated code:
+ *
+ *  C4 hh   LDI  >expr
+ *  34p     XPAH ptr
+ *  C4 ll   LDI  <expr
+ *  30p     XPAL ptr
+ *
+ * This was originally a macro in the NSC cross assembler.
+ */
+static int
+grp_ldpi(char **p, int pass, const opcode_t *instr)
+{
+    value_t v;
+    int ptr;
+
+    /* Get the pointer register. */
+    ptr = get_ptr(p);
+    if (ptr < 0)
+	error(ERR_PTR, NULL);
+
+    /* Skip the comma. */
+    if (**p != ',')
+	error(ERR_COMMA, NULL);
+    (*p)++;
+
+    /* Grab the expression. */
+    skip_white(p);
+    v = expr(p);
+    if (pass == 2) {
+	if (UNDEFINED(v))
+		error(ERR_UNDEF, NULL);
+    }
+
+    /* Generate the code for this. */
+    emit_byte(0xc4, pass);		// LDI >expr
+    emit_byte((v.v >> 8), pass);
+    emit_byte(0x34 + ptr, pass);	// XPAH ptr
+    emit_byte(0xc4, pass);		// LDI <expr
+    emit_byte((v.v & 0xff), pass);
+    emit_byte(0x30 + ptr, pass);	// XPAL ptr
+
+    return 6;
+}
+#endif
 
 
 #if 0
@@ -723,15 +796,23 @@ t_instr(const target_t *trg, char **p, int pass)
 		bytes = grp_mem(p, pass, op);
 		break;
 
+#if USE_JS
+	case GRP_JS:
+		bytes = grp_js(p, pass, op);
+		break;
+#endif
+
+#if USE_LDPI
+	case GRP_LDPI:
+		bytes = grp_ldpi(p, pass, op);
+		break;
+#endif
+
 #if 0
 	case AM_ABS:
 		bytes = op_abs(p, pass, op);
 		break;
 #endif
-
-	case GRP_JS:
-		bytes = grp_js(p, pass, op);
-		break;
 
 	default:
 		emit_byte(op->opcode, pass);

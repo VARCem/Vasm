@@ -8,7 +8,7 @@
 #
 #		Makefile for Windows systems using the TCC environment.
 #
-# Version:	@(#)Makefile.TCC	1.2.0	2023/06/23
+# Version:	@(#)Makefile.TCC	1.2.0	2023/08/20
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -110,7 +110,7 @@ ifndef SCMP
 endif
 ifeq ($(SCMP), y)
  DEFS		+= -DUSE_SCMP
- TARGETS	+= scmp.o
+ TARGETS	+= ins8060.o
 endif
 
 ifndef SCN2650

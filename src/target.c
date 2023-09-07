@@ -8,7 +8,7 @@
  *
  *		Handle selection of a target device.
  *
- * Version:	@(#)target.c	1.0.5	2023/06/05
+ * Version:	@(#)target.c	1.0.6	2023/08/20
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *

@@ -8,7 +8,7 @@
  *
  *		General expression handler.
  *
- * Version:	@(#)expr.c	1.0.10	2023/06/17
+ * Version:	@(#)expr.c	1.0.11	2023/08/20
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -153,6 +153,11 @@ do_bin:
 	} else {
 		*p = pt;
 
+		if (**p == '0') {
+			/* Old code uses 0xx as meaning HEX. */
+			goto do_hex;
+		}
+
 		/* No explicit radix specifier present, go with the default. */
 		switch (radix) {
 			case 2:
@@ -192,6 +197,7 @@ do_bin:
  * *			the current PC
  * $			the current PC
  * 'x'			single character x
+ * funcname(...)	calling a function
  * ident		a symbol
  * number		a number, see number() above
  *
@@ -330,24 +336,43 @@ program_counter:
     } else if (isalpha(**p)) {
 	/* Symbol reference. */
 	nident(p, id);
-	sym = sym_lookup(id, NULL);
-	if (sym == NULL) {
-		/* Forward reference, remember it. */
-		sym = sym_aquire(id, NULL);
-		if (DEFINED(sym->value))
-			error(ERR_REDEF, id);
+	pt = *p;
+	if (**p == '(') {
+		/* We have an alnum AND a (, could be function. */
+		(*p)++;
 
-		/* Set the correct type. */
-		if (label) {
-			sym->kind = KIND_LBL;
-			sym->value.t = TYPE_WORD;
-		} else {
-			sym->kind = KIND_VAR;
-			sym->value.t = TYPE_BYTE;
+		/* Execute function. */
+		res = function(id, p);
+		if (res.t == TYPE_NONE) {
+			/* Hmm, was not a function! */
+			*p = pt;
+			goto no_func;
 		}
-		sym->value.v = 0;
+
+		if (**p != ')')
+			error(ERR_OPER, NULL);
+		(*p)++;
+	} else {
+no_func:
+		sym = sym_lookup(id, NULL);
+		if (sym == NULL) {
+			/* Forward reference, remember it. */
+			sym = sym_aquire(id, NULL);
+			if (DEFINED(sym->value))
+				error(ERR_REDEF, id);
+
+			/* Set the correct type. */
+			if (label) {
+				sym->kind = KIND_LBL;
+				sym->value.t = TYPE_WORD;
+			} else {
+				sym->kind = KIND_VAR;
+				sym->value.t = TYPE_BYTE;
+			}
+			sym->value.v = 0;
+		}
+		res = sym->value;
 	}
-	res = sym->value;
     } else {
 	/* Must be just a number, but do mind the radix! */
 	res = number(p);
