@@ -8,7 +8,7 @@
  *
  *		General expression handler.
  *
- * Version:	@(#)expr.c	1.0.11	2023/08/20
+ * Version:	@(#)expr.c	1.0.12	2023/09/08
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -133,48 +133,47 @@ do_bin:
 	} while ((**p == '0') || (**p == '1'));
 
 	type = ((*p - pt) > 17) ? TYPE_DWORD : ((*p - pt) > 9) ? TYPE_WORD : NUM_TYPE(num.v);
-    } else {
-	/* Check if we have the '0xxH' form. */
-	while (isxdigit(**p))
+    } else if (**p == '0') {
+	/* Check if we have the '0x' (C style) form. */
+	(*p)++;
+	pt = *p;
+	if (**p == 'x' || **p == 'X') {
 		(*p)++;
-	if (**p == 'H' || **p == 'h') {
-		/* We have this format. */
-		*p = pt;
-
-		do {
-			num.v = (num.v << 4) + digit((*p)++);
-		} while (isxdigit(**p));
-
-		if (**p != 'H' && **p != 'h')
-			error(ERR_NUM, NULL);
-
-		(*p)++;
-		type = ((*p - pt) > 7) ? TYPE_DWORD : ((*p - pt) > 3) ? TYPE_WORD : NUM_TYPE(num.v);
-	} else {
-		*p = pt;
-
-		if (**p == '0') {
-			/* Old code uses 0xx as meaning HEX. */
-			goto do_hex;
-		}
-
-		/* No explicit radix specifier present, go with the default. */
-		switch (radix) {
-			case 2:
-				goto do_bin;
-
-			case 8:
-				goto do_oct;
-
-			case 10:
-				goto do_dec;
-
-			case 16:
-				goto do_hex;
-		}
-
-		/*NOTREACHED*/
+		pt = *p;
+		goto do_hex;
 	}
+
+	/*
+	 * We could have '0..H' here, or even the old-style
+	 * '0..', without the suffix. We will accept the
+	 * suffix, but not anything else.
+	 */
+	while (isxdigit(**p))
+		num.v = (num.v << 4) + digit((*p)++);
+
+	/* Set type. We do it here to avoid the extra char below. */
+	type = ((*p - pt) > 7) ? TYPE_DWORD : ((*p - pt) > 3) ? TYPE_WORD : NUM_TYPE(num.v);
+
+	/* Quietly accept the '0..H' form. */
+	if (**p == 'h' || **p == 'H')
+		(*p)++;
+    } else {
+	/* No explicit radix specifier present, go with the default. */
+	switch (radix) {
+		case 2:
+			goto do_bin;
+
+		case 8:
+			goto do_oct;
+
+		case 10:
+			goto do_dec;
+
+		case 16:
+			goto do_hex;
+	}
+
+	/*NOTREACHED*/
     }
 
     SET_TYPE(num, type);

@@ -8,7 +8,7 @@
  *
  *		Define application version and build info.
  *
- * Version:	@(#)version.h	1.0.10	2023/09/06
+ * Version:	@(#)version.h	1.0.11	2023/09/08
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -56,7 +56,7 @@
 #define APP_VER_MAJOR	1
 #define APP_VER_MINOR	0
 #define APP_VER_REV	20
-#define APP_VER_PATCH	0
+#define APP_VER_PATCH	1
 
 
 /* Standard C preprocessor macros. */
@@ -69,11 +69,12 @@
 #define APP_VER_NUM	APP_VER_MAJOR.APP_VER_MINOR.APP_VER_REV
 #if defined(APP_VER_PATCH) && APP_VER_PATCH > 0
 # define APP_VER_NUM_4	APP_VER_MAJOR.APP_VER_MINOR.APP_VER_REV.APP_VER_PATCH
+# define APP_VERSION	STR(APP_VER_NUM_4)
 #else
 # define APP_VER_NUM_4	APP_VER_MAJOR.APP_VER_MINOR.APP_VER_REV.0
+# define APP_VERSION	STR(APP_VER_NUM)
 #endif
-#define APP_VERSION	STR(APP_VER_NUM)
-#define APP_VERSION_4	STR(APP_VER_NUM_4)
 
+#define APP_VERSION_4	STR(APP_VER_NUM_4)
 
 #endif	/*VERSION_H*/
