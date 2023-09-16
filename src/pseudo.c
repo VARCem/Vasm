@@ -8,7 +8,7 @@
  *
  *		Handle directives and pseudo-ops.
  *
- * Version:	@(#)pseudo.c	1.0.10	2023/06/24
+ * Version:	@(#)pseudo.c	1.0.11	2023/09/16
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -655,6 +655,8 @@ do_fill(char **p, int pass)
     if ((pass == 2) && UNDEFINED(v))
 	error(ERR_UNDEF, NULL);
     count = v.v;
+    if (count < 0)
+	error(ERR_RNG, NULL);
 
     skip_white(p);
     if (**p == ',') {
