@@ -8,7 +8,7 @@
  *
  *		Handle any errors.
  *
- * Version:	@(#)error.c	1.0.7	2023/06/23
+ * Version:	@(#)error.c	1.0.8	2023/09/26
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -91,6 +91,7 @@ const char	*err_msgs[ERR_MAXERR] = {
     "illegal statement",
     "end of line expected",
     "illegal redefinition",
+    "invalid macro name",
     "not enough actual parameters for macro",
     "not enough formal parameters for macro",
     "MACRO before ENDM",

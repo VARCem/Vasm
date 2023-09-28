@@ -273,11 +273,9 @@ macro_exec(const char *name, char **p, char **newp, int pass)
 		*sp++ = *curmac->defptr;
 	} while (*curmac->defptr && *curmac->defptr++ != '\n');
 	*sp = '\0';
-//printf("ORIG: '%s'\n", temp);
 
 	/* Expand the copy. */
 	subst(curmac, temp);
-//printf("EXP: '%s'\n", temp);
 
 	/* Copy expanded line to data. */
 	sp = temp;
@@ -297,6 +295,7 @@ macro_close(char **p)
 {
     if (curmac != NULL) {
 	*p = curmac->saved;
+printf("CONT(%s)\n", *p);
 
 	curmac = NULL;
 	maclevel--;
@@ -320,17 +319,22 @@ do_macro(char **p, int pass)
 	error(ERR_MACRO, NULL);
 
     /* We do need a macro name. */
-//FIXME: maybe enforce label does not have colon?
     if (current_label == NULL)
 	error(ERR_LABEL, NULL);
+
+    /* Make sure label does not have a colon. */
+    if (current_label->subkind == 2)
+	error(ERR_MACNAME, NULL);
+
     current_label->kind = KIND_MAC;
 
     /* Get to the macro parameters. */
     skip_white(p);
     while (! IS_END(**p)) {
-	//FIXME: error if out of space?
-	if (sp < &temp[sizeof(temp) - 2])
-		*sp++ = **p;
+	if (sp >= &temp[sizeof(temp) - 2])
+		error(ERR_MEM, "macro parameters");
+
+	*sp++ = **p;
 	(*p)++;
     }
     *sp = '\0';

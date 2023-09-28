@@ -8,7 +8,7 @@
  *
  *		Handle symbols.
  *
- * Version:	@(#)symbol.c	1.0.7	2023/06/21
+ * Version:	@(#)symbol.c	1.0.8	2023/09/26
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -177,7 +177,7 @@ sym_aquire(const char *name, symbol_t **table)
 
 
 symbol_t *
-define_label(const char *id, uint32_t val, symbol_t *parent, int force)
+define_label(const char *id, uint32_t val, symbol_t *parent, int pass, int t)
 {
     char nid[ID_LEN];
     symbol_t *sym;
@@ -199,12 +199,23 @@ define_label(const char *id, uint32_t val, symbol_t *parent, int force)
     } else
 	sym = sym_aquire(id, NULL);
 
-    if (! force) {
+    if (pass == 1) {
+	/* In pass 1, re-definitions are not allowed. */
 	if (IS_VAR(sym) || (DEFINED(sym->value) && (sym->value.v != val)))
 		error(parent ? ERR_LOCAL_REDEF : ERR_REDEF, id);
+    } else {
+	/*
+	 * In pass 2, we ARE allowed to change a variable back to a label
+	 * because this can happen in an EQU statement, for example.
+	 */
+#if 0
+	if (DEFINED(sym->value) && (sym->value.v != val))
+		error(parent ? ERR_LOCAL_REDEF : ERR_REDEF, id);
+#endif
     }
 
     sym->kind = KIND_LBL;
+    sym->subkind = t;
     sym->filenr = filenames_idx;
     sym->linenr = line;
     sym->value.v = val;

@@ -8,7 +8,7 @@
  *
  *		Define the error codes.
  *
- * Version:	@(#)error.h	1.0.6	2023/06/23
+ * Version:	@(#)error.h	1.0.7	2023/09/26
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -75,6 +75,7 @@ typedef enum errors_e {
     ERR_NOSTMT,			// "illegal statement"
     ERR_EOL,			// "end of line expected"
     ERR_REDEF,			// "illegal redefinition"
+    ERR_MACNAME,		// "invalid macro name"
     ERR_MACACT,			// "not enough actual params"
     ERR_MACFRM,			// "not enough formal params"
     ERR_MACRO,			// "MACRO before ENDM",

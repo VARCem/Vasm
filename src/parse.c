@@ -8,7 +8,7 @@
  *
  *		Parse the source input, process it, and generate output.
  *
- * Version:	@(#)parse.c	1.0.12	2023/06/23
+ * Version:	@(#)parse.c	1.0.13	2023/09/26
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -263,7 +263,7 @@ statement(char **p, char **newptr, int pass)
 
     /* If we are defining a macro, do not process labels. */
     if (macstate)
-	goto nomacro1;
+	goto skip_label;
 
     /* Local labels can start with a digit. */
     if (**p == ALPHA_CHAR) {
@@ -286,19 +286,22 @@ statement(char **p, char **newptr, int pass)
      * name as an instruction, add a colon to it :)
      */
     if (**p == COLON_CHAR) {
-	(*p)++;
-	label++;
+	if (label) {
+		(*p)++;
+		label++;
+	} else
+		error(ERR_ID, NULL);
     }
 
     /* Skip any space or comment. */
     skip_white_and_comment(p);
 
-    if ((label == 2) ||
-	(!macro_ok(id) && (is_pseudo(id, 0) == NULL) && !trg_instr_ok(id))) {
+    if ((label == 2) || (local == 1) ||
+        (label && !macro_ok(id) && (is_pseudo(id, 0) == NULL) && !trg_instr_ok(id))) {
 	/*
 	 * This is either a forced label (because it has a colon at
-	 * the end), or it is a regular identifier and it is NOT an
-	 * instruction, pseudo or macro.
+	 * the end), or it is a local label, or it is a regular
+	 * identifier and it is NOT an instruction, pseudo or macro.
 	 */
 	if (ifstate) {
 		/*
@@ -316,7 +319,8 @@ statement(char **p, char **newptr, int pass)
 			if (current_label == NULL)
 				error(ERR_NO_GLOBAL, NULL);
 
-			define_label(id, pc, current_label, 1);
+			/* Define label, but do not allow re-definition. */
+			define_label(id, pc, current_label, pass, label);
 		} else {
 			/*
 			 * If auto_local is set, create this label as
@@ -329,7 +333,8 @@ statement(char **p, char **newptr, int pass)
 			 * doing a one-shot.
 			 */
 			if (auto_local) {
-				current_label = define_label(id, pc, NULL, 1);
+				/* Define label, but do not allow re-definition. */
+				current_label = define_label(id, pc, NULL, pass, label);
 				if (auto_local < 0)
 					auto_local++;
 			} else {
@@ -338,7 +343,7 @@ statement(char **p, char **newptr, int pass)
 				 * label as usual, but do NOT start a new
 				 * context for locals.
 				 */
-				(void)define_label(id, pc, NULL, 1);
+				(void)define_label(id, pc, NULL, pass, label);
 			}
 		}
 	}
@@ -394,7 +399,7 @@ statement(char **p, char **newptr, int pass)
 	return NULL;
     }
 
-nomacro1:
+skip_label:
     /* Check for directive or instruction. */
     while (**p == DOT_CHAR) {
 	/* Local label or directive. */
@@ -413,7 +418,7 @@ nomacro1:
 
 	/* If we are defining a macro, do not process labels. */
 	if (macstate)
-		goto nomacro2;
+		goto no_macro;
 
 	/*
 	 * This is a "dot label", which is a "shorthand" version
@@ -449,7 +454,7 @@ nomacro1:
 
 	/* Define only if needed. */
 	if (ifstate)
-		define_label(id, pc, NULL, 0);
+		define_label(id, pc, NULL, pass, label);
 
 	/* Skip trailing space and comments. */
 	skip_white_and_comment(p);
@@ -469,7 +474,7 @@ nomacro1:
 	 */
     }
 
-nomacro2:
+no_macro:
     /* Check if this is a pseudo (directive without the dot.) */
     pt = *p;
     nident_upcase(p, id);
@@ -484,7 +489,7 @@ nomacro2:
     }
 
     if (macstate)
-	goto nomacro3;
+	goto skip_macro;
 
     /* No pseudo, see if it is a macro being called. */
     skip_white(p);
@@ -514,7 +519,7 @@ nomacro2:
 		error(ERR_NOSTMT, NULL);
     }
 
-nomacro3:
+skip_macro:
     /* If we are defining a macro, add this line to the macro. */
     if (macstate)
 	macro_add(macpt);
@@ -593,9 +598,6 @@ pass(char **p, int pass)
 		/* OK, skip into the next line. */
 		skip_eol(p);
 		if (**p == ETX_CHAR) {
-			/* Skip the EOM.. */
-			(*p)++;
-
 			/* Close macro and jump back into source. */
 			macro_close(p);
 		}

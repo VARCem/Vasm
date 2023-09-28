@@ -8,7 +8,7 @@
  *
  *		Handle the listfile output.
  *
- * Version:	@(#)list.c	1.0.12	2023/06/23
+ * Version:	@(#)list.c	1.0.13	2023/09/26
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -54,16 +54,18 @@
 
 #define LIST_PLENGTH	66		// number of lines per page
 #define LIST_PWIDTH	80		// number of characters per line
+#define LIST_AWIDTH	4		// number of digits in addresses
+#define LIST_NBYTES	4		// this many code bytes per line
 
 #define LIST_CHAR_FF	"\014"		// FormFeed character
 #define LIST_CHAR_SI	"\017"		// SI (condensed printing mode)
 #define LIST_CHAR_DC2	"\022"		// DC2 (end condensed printing mode)
 
-#define LIST_NBYTES	4		// this many code bytes per line
-
 
 int		list_plength = LIST_PLENGTH,	// lines per page
-		list_pwidth = LIST_PWIDTH;	// characters per line
+		list_pwidth = LIST_PWIDTH,	// characters per line
+		list_awidth = LIST_AWIDTH,	// digits in address
+		list_nbytes = LIST_NBYTES;	// codebytes per list line
 
 static int	list_lnr,
 		list_pnr,
@@ -218,10 +220,10 @@ list_line(const char *p)
 
     /* Output listing line number. */
     fprintf(list_file, "%05i ", list_lnr++);
-    fprintf(list_file, "%06X", list_pc);
+    fprintf(list_file, "%0*X", list_awidth, list_pc);
 
     /* Our max space is LIST_NBYTES * 3 characters. */
-    count = LIST_NBYTES * 3;
+    count = list_nbytes * 3;
 
     /* Output code if we emitted any. */
     if (list_oc < output_size) {
@@ -400,6 +402,8 @@ list_init(const char *fn)
     list_lnr = 1;
     list_pnr = list_pln = 0;
     list_pc = list_oc = 0;
+    list_awidth = LIST_AWIDTH;
+    list_nbytes = LIST_NBYTES;
     list_title = NULL;
     list_subttl = NULL;
 

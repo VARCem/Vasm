@@ -1,0 +1,20 @@
+- end-of-macro generates empty list line
+
+- macro variable arguments
+
+- first page title gets lost (we need to buffer lines for each page, and
+  not flush out until page is done)
+
+- maybe we should let .subttl flush the current page?
+
+- ifndef..endif should only check definition in pass1, because in pass2
+  it may be defined by its own block..
+
+- allow the backends to set frontend variables, such as with of address
+  field, number of code bytes per line, default radix, which char to use
+  for dot labels, and so on.
+  --> addr width, codebytes done
+
+- check (again) to make sure explicit assignments keep the assigned width
+  of a value ($0000 is 16bit, $00 is 8, and so on.)
+  label symbols must ALWAYS be 'word' type.

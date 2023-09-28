@@ -996,7 +996,7 @@ do_org(char **p, int pass)
 static char *
 do_org_list(char *str)
 {
-    sprintf(str, "*= %06X", pc);
+    sprintf(str, "*= %0*X", list_awidth, pc);
 
     return str;
 }

@@ -8,7 +8,7 @@
  *
  *		Definitions for the entire application.
  *
- * Version:	@(#)global.h	1.0.13	2023/06/23
+ * Version:	@(#)global.h	1.0.14	2023/09/26
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -114,10 +114,11 @@ typedef struct value {
 typedef struct sym_ {
     char	name[ID_LEN];
     value_t	value;
-    uint8_t	kind;			// is it a label or a variable?
+    int8_t	kind;			// is it a label or a variable?
 #define KIND_LBL 1
 #define KIND_VAR 2
-#define KIND_MAC 4
+#define KIND_MAC 3
+    int8_t	subkind;
     uint8_t	pass;			// defined in which pass?
     short	filenr;			// in which file was it defined?
     int		linenr;			// on what line in that file?
@@ -181,7 +182,9 @@ extern uint32_t		output_size;
 extern uint8_t		*output_buff;
 
 extern int		list_plength,
-			list_pwidth;
+			list_pwidth,
+			list_awidth,
+			list_nbytes;
 
 extern int		macstate,
 			newmacstate,
@@ -214,7 +217,7 @@ extern char		sym_type(const symbol_t *);
 extern symbol_t		*sym_lookup(const char *, symbol_t **);
 extern void		sym_free(symbol_t **);
 extern symbol_t		*sym_aquire(const char *, symbol_t **);
-extern symbol_t		*define_label(const char *, uint32_t, symbol_t *, int);
+extern symbol_t		*define_label(const char *, uint32_t, symbol_t *, int, int);
 extern void		define_variable(const char *, value_t, int);
 extern const char	*sym_print(const symbol_t *);
 
