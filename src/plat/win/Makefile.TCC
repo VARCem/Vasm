@@ -8,7 +8,7 @@
 #
 #		Makefile for Windows systems using the TCC environment.
 #
-# Version:	@(#)Makefile.TCC	1.2.0	2023/08/20
+# Version:	@(#)Makefile.TCC	1.2.1	2023/09/28
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -48,13 +48,13 @@
 ifndef ARCH
  ARCH		:= x86
 endif
-
 ifndef DEBUG
  DEBUG		:= n
 endif
 
 
-DEFS	:= -DALLOW_UNDEFINED_IF
+# General options.
+DEFS		:= -DALLOW_UNDEFINED_IF
 
 
 ifndef MOS6502
@@ -185,10 +185,6 @@ endif
 OPTS		:= -DARCH=$(ARCH) \
 		   -D_CRT_NON_CONFORMING_SWPRINTFS \
 		   -D__USE_MINGW_ANSI_STDIO_X
-ifndef VCRUNTIME
- # MinGW does not provide MD/MT yet.
- VCRUNTIME	:= MD
-endif
 RCOPTS		:= --input-format=rc -O coff
 ifdef RCTARGET
  RCOPTS		+= --target=$(RCTARGET)
@@ -199,7 +195,6 @@ LOPTS		:= -mconsole
 
 # General build options.
 ifeq ($(DEBUG), y)
- VCRUNTIME	:= $(VCRUNTIME)d
  DFLAGS		+= -ggdb -D_DEBUG
  RCOPTS		:= -D_DEBUG $(RCOPTS)
  AOPTIM		:=
@@ -218,7 +213,6 @@ else
   endif
  endif
 endif
-OPTS		+= #/$(VCRUNTIME)
 ifeq ($(PROFILER), y)
  LOPTS		+= -Xlinker -Map=$(PROG).map
 endif
@@ -228,8 +222,8 @@ endif
 CFLAGS		= $(OPTS) $(DFLAGS) $(COPTIM) $(AOPTIM) \
 		  $(AFLAGS) $(INCS) $(DEFS) \
 		  -mstackrealign \
-		  -fomit-frame-pointer -fno-strict-aliasing \
-		  -Wall -Wundef #-Wmissing-declarations
+		  -fno-strict-aliasing \
+		  -Wall -Wundef
 LDFLAGS		:= $(LOPTS) $(DFLAGS) $(LDIR)
 ARFLAGS		:= $(AOPTS)
 RCFLAGS		= $(RCOPTS)
@@ -262,9 +256,7 @@ endif
 #		Nothing should need changing from here on..		#
 #########################################################################
 
-# Final fixups.
 INCS		+= -Iplat/win
-
 VPATH		:= plat/win targets .
 
 PROG		:= vasm.exe

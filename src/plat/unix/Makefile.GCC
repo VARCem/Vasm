@@ -8,7 +8,7 @@
 #
 #		Makefile for UNIX-like systems using the GCC environment.
 #
-# Version:	@(#)Makefile.GCC	1.2.0	2023/08/20
+# Version:	@(#)Makefile.GCC	1.2.1	2023/09/28
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -48,13 +48,13 @@
 ifndef ARCH
  ARCH		:= x86
 endif
-
 ifndef DEBUG
  DEBUG		:= n
 endif
 
 
-DEFS	:= -DALLOW_UNDEFINED_IF
+# General options.
+DEFS		:= -DALLOW_UNDEFINED_IF
 
 
 ifndef MOS6502
@@ -125,18 +125,6 @@ endif
 #########################################################################
 #		Nothing should need changing from here on..		#
 #########################################################################
-
-# Import the various platform/architecture names.
-ifdef MAKEFILE_LIST
-#TOPDIR		:= $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
- TOPDIR		:= /project/VARCem/src/build
- TOPFILE	:= $(abspath $(firstword $(MAKEFILE_LIST)))
-else
- TOPDIR		:= ./build
- TOPFILE	:= Makefile.GCC
-endif
-include		$(TOPDIR)/OSDetect.mk
-include		$(TOPDIR)/archs.mk
 
 # Definitions for this enivonment.
 DEVENV		:= gcc
@@ -217,20 +205,17 @@ else
   endif
  endif
 endif
-OPTS		+=
 ifeq ($(PROFILER), y)
  LOPTS		+= -Xlinker -Map=$(PROG).map
 endif
 
 
-# Final fixups.
-INCS		+= -Iplat/unix
-
 # Final versions of the toolchain flags.
-CFLAGS		= $(WX_FLAGS) $(OPTS) $(DFLAGS) $(COPTIM) $(AOPTIM) \
-		  $(AFLAGS) $(INCS) $(DEFS) -mstackrealign \
-		  -fomit-frame-pointer -fno-strict-aliasing \
-		  -Wall -Wundef #-Wmissing-declarations
+CFLAGS		= $(OPTS) $(DFLAGS) $(COPTIM) $(AOPTIM) \
+		  $(AFLAGS) $(INCS) $(DEFS) \
+		  -mstackrealign \
+		  -fno-strict-aliasing \
+		  -Wall -Wundef
 LDFLAGS		:= $(LOPTS) $(DFLAGS) $(LDIR)
 ARFLAGS		:= $(AOPTS)
 
@@ -257,6 +242,7 @@ endif
 #		Nothing should need changing from here on..		#
 #########################################################################
 
+INCS		+= -Iplat/unix
 VPATH		:= plat/unix . targets
 
 #LIBS		:=
@@ -276,8 +262,7 @@ all:		$(LIBS) $(PROG)
 
 libfoo.dll.a libfoo.so:	$(LOBJ)
 		@echo Linking shared library $@ ..
-		@$(LINK) $(LDFLAGS) -shared -o $@ \
-			$(LOBJ)
+		@$(LINK) $(LDFLAGS) -shared -o $@ $(LOBJ)
 		$(if $(filter $(DEBUG),y),,@$(STRIP) --strip-unneeded $@)
 
 libfoo.a:	$(LOBJ)
@@ -290,15 +275,11 @@ vasm:		$(OBJ)
 		@$(LINK) $(LDFLAGS) -o $@ $(OBJ) $(LIBS) $(LDLIBS)
 		$(if $(filter $(DEBUG),y),,@$(STRIP) $@)
 
-test:		tests/hello.asm
-		@echo Assembling hello.asm ..
-		@asm6502 -v -o hello $<
 
 clean:
 		@echo Cleaning objects..
 		@-rm -f *.o
 		@-rm -f *.d
-		@echo Cleaning resources..
 
 
 clobber:	clean
@@ -310,7 +291,7 @@ clobber:	clean
 #		@-rm -f $(DEPFILE)
 
 depclean:
-		@-del $(DEPFILE)
+		@-rm -f $(DEPFILE)
 		@echo Creating dependencies..
 		@echo # Run "make depends" to re-create this file. >$(DEPFILE)
 

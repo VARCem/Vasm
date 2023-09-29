@@ -8,7 +8,7 @@
 #
 #		Makefile for Windows systems using the TCC environment.
 #
-# Version:	@(#)Makefile.TCC	1.2.0	2023/08/20
+# Version:	@(#)Makefile.TCC	1.2.1	2023/09/28
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -48,13 +48,13 @@
 ifndef ARCH
  ARCH		:= x86
 endif
-
 ifndef DEBUG
  DEBUG		:= n
 endif
 
 
-DEFS	:= -DALLOW_UNDEFINED_IF
+# General options.
+DEFS		:= -DALLOW_UNDEFINED_IF
 
 
 ifndef MOS6502
@@ -173,7 +173,6 @@ CC		:= tcc -m$(TARGET)
 CXX		:= tcc -m$(TARGET)
 CPP		:= cpp -P
 LINK		:= tcc -m$(TARGET)
-WINDRES		:= windres
 AR		:= tcc-ar
 RANLIB		:= echo
 STRIP		:= echo
@@ -182,24 +181,12 @@ ifndef CAT
 endif
 
 # Set up the correct toolchain flags.
-OPTS		:= -DARCH=$(ARCH) \
-		   -D_CRT_NON_CONFORMING_SWPRINTFS \
-		   -D__USE_MINGW_ANSI_STDIO_X
-ifndef VCRUNTIME
- # MinGW does not provide MD/MT yet.
- VCRUNTIME	:= MD
-endif
-RCOPTS		:= --input-format=rc -O coff
-ifdef RCTARGET
- RCOPTS		+= --target=$(RCTARGET)
-endif
-RCOPTS		+= -D RC_INVOKED -o
+OPTS		:= -DARCH=$(ARCH)
 AOPTS		:= r
-LOPTS		:= -mconsole
+LOPTS		:=
 
 # General build options.
 ifeq ($(DEBUG), y)
- VCRUNTIME	:= $(VCRUNTIME)d
  DFLAGS		+= -ggdb -D_DEBUG
  RCOPTS		:= -D_DEBUG $(RCOPTS)
  AOPTIM		:=
@@ -218,7 +205,6 @@ else
   endif
  endif
 endif
-OPTS		+= #/$(VCRUNTIME)
 ifeq ($(PROFILER), y)
  LOPTS		+= -Xlinker -Map=$(PROG).map
 endif
@@ -228,11 +214,10 @@ endif
 CFLAGS		= $(OPTS) $(DFLAGS) $(COPTIM) $(AOPTIM) \
 		  $(AFLAGS) $(INCS) $(DEFS) \
 		  -mstackrealign \
-		  -fomit-frame-pointer -fno-strict-aliasing \
-		  -Wall -Wundef #-Wmissing-declarations
+		  -fno-strict-aliasing \
+		  -Wall -Wundef
 LDFLAGS		:= $(LOPTS) $(DFLAGS) $(LDIR)
 ARFLAGS		:= $(AOPTS)
-RCFLAGS		= $(RCOPTS)
 
 
 # Build module rules.
@@ -252,19 +237,12 @@ else
 		@$(CC) $(CFLAGS) $(DEPS) -E $< >NUL
 endif
 
-# For systems that use these, compile a resource file.
-.rc.res:	$<
-		@echo Processing $<
-		@$(WINDRES) $(RCFLAGS) $@ $<
-
 
 #########################################################################
 #		Nothing should need changing from here on..		#
 #########################################################################
 
-# Final fixups.
 INCS		+= -Iplat/unix
-
 VPATH		:= plat/unix targets .
 
 PROG		:= vasm

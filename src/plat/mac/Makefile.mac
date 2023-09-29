@@ -8,7 +8,7 @@
 #
 #		Makefile for macOS systems using the Xcode environment.
 #
-# Version:	@(#)Makefile.mac	1.2.0	2023/08/20
+# Version:	@(#)Makefile.mac	1.2.1	2023/09/28
 #
 # Author:	Fred N. van Kempen, <waltje@varcem.com>
 #
@@ -48,13 +48,13 @@
 ifndef ARCH
  ARCH		:= x64
 endif
-
 ifndef DEBUG
  DEBUG		:= n
 endif
 
 
-DEFS	:= -DALLOW_UNDEFINED_IF
+# General options.
+DEFS		:= -DALLOW_UNDEFINED_IF
 
 
 ifndef MOS6502
@@ -180,7 +180,6 @@ else
   endif
  endif
 endif
-OPTS		+=
 ifeq ($(PROFILER), y)
  LOPTS		+= -Xlinker -Map=$(PROG).map
 endif
@@ -189,8 +188,9 @@ endif
 # Final versions of the toolchain flags.
 CFLAGS		= $(OPTS) $(DFLAGS) $(COPTIM) $(AOPTIM) \
 		  $(AFLAGS) $(INCS) $(DEFS) \
-		  -mstackrealign -fno-strict-aliasing \
-		  -Wall -Wundef #-Wmissing-declarations
+		  -mstackrealign \
+		  -fno-strict-aliasing \
+		  -Wall -Wundef
 LDFLAGS		:= $(LOPTS) $(DFLAGS) $(LDIR)
 ARFLAGS		:= $(AOPTS)
 
@@ -217,7 +217,7 @@ endif
 #		Nothing should need changing from here on..		#
 #########################################################################
 
-# Final fixups.
+INCS		+= -Iplat/mac
 VPATH		:= plat/mac . targets
 
 #LIBS		:=
@@ -264,7 +264,7 @@ depclean:
 depends:	DEPOBJ=$(OBJ:%.o=%.d)
 depends:	depclean $(DEPOBJ)
 		@$(CAT) $(DEPOBJ) >>$(DEPFILE)
-		@-del $(DEPOBJ)
+		@-rm -f $(DEPOBJ)
 
 $(DEPFILE):
 
