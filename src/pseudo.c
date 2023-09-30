@@ -8,7 +8,7 @@
  *
  *		Handle directives and pseudo-ops.
  *
- * Version:	@(#)pseudo.c	1.0.11	2023/09/16
+ * Version:	@(#)pseudo.c	1.0.12	2023/09/28
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -96,6 +96,7 @@ string_lit(char **p, char *buf, int bufsize, int quot)
 
 
 /* The ".addr <expr>" directive. */
+//FIXME: this is for the SC/MP and INS8060 only!
 static char *
 do_addr(char **p, int pass)
 {
@@ -281,21 +282,6 @@ do_byte(char **p, int pass)
 		len = string_lit(p, buf, STR_LEN, 1);
 		emit_str(buf, len, pass);
 		pc += len;
-	} else if (**p == '\'') {
-		(*p)++;
-		if (**p == '\'')
-			error(ERR_CHR, NULL);
-
-		buf[0] = **p;
-
-		(*p)++;
-		if (**p != '\'')
-			error(ERR_CHREND, NULL);
-		len = 1;
-		emit_str(buf, len, pass);
-
-		(*p)++;
-		pc++;
 	} else {
 		v = expr(p);
 
@@ -364,7 +350,6 @@ do_define(char **p, int pass)
 nodata:
 	v.v = 1;
 	SET_DEFINED(v);
-
     }
 
     define_variable(id, v, 0);
@@ -520,7 +505,7 @@ do_end(char **p, int pass)
 static char *
 do_end_list(char *str)
 {
-    sprintf(str, "$= %06X", sa);
+    sprintf(str, "$= %0*X", list_awidth, sa);
 
     return str;
 }

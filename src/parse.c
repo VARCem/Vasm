@@ -8,7 +8,7 @@
  *
  *		Parse the source input, process it, and generate output.
  *
- * Version:	@(#)parse.c	1.0.13	2023/09/26
+ * Version:	@(#)parse.c	1.0.14	2023/09/28
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -597,10 +597,17 @@ pass(char **p, int pass)
 
 		/* OK, skip into the next line. */
 		skip_eol(p);
+
+		/* End of macro reached? */
 		if (**p == ETX_CHAR) {
 			/* Close macro and jump back into source. */
 			macro_close(p);
+
+			/* Now back in source file, skip EOL here, too. */
+			skip_eol(p);
 		}
+
+		/* End of current file reached? */
 		if (**p == EOF_CHAR) {
 			/* Skip the EOF.. */
 			(*p)++;

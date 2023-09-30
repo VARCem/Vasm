@@ -295,7 +295,6 @@ macro_close(char **p)
 {
     if (curmac != NULL) {
 	*p = curmac->saved;
-printf("CONT(%s)\n", *p);
 
 	curmac = NULL;
 	maclevel--;

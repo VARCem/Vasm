@@ -8,7 +8,7 @@
  *
  *		Definitions for the entire application.
  *
- * Version:	@(#)global.h	1.0.14	2023/09/26
+ * Version:	@(#)global.h	1.0.16	2023/09/28
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -68,6 +68,7 @@
 #define IS_END(c)	((!(c)) || IS_EOL((c)))
 #define IS_SPACE(c)	(((c) == '\t') || ((c) == ' '))
 #define IS_IDENT(c)	(((c) == DOT_CHAR) || ((c) == '_'))
+#define islabel(c)	(isalpha((c)) || ((c) == '_'))
 
 #define MAX_FILENAMES	256 + 1		// maximum include files
 #define MAX_IFLEVEL	16		// maximum depth of IF levels
@@ -94,9 +95,9 @@ typedef struct value {
 /* For the value-specific directives. */
 #define VALUE_DEFINED 0x80
 #define DEFINED(x) (((x).t & VALUE_DEFINED) != 0)
-#define UNDEFINED(x) (((x).t & VALUE_DEFINED) == 0)
-#define SET_DEFINED(v) ((v).t = ((v).t | VALUE_DEFINED))
-#define SET_UNDEFINED(v) ((v).t = (v).t & TYPE_MASK);
+#define UNDEFINED(x) (! DEFINED(x))
+#define SET_DEFINED(v) ((v).t |= VALUE_DEFINED)
+#define SET_UNDEFINED(v) ((v).t &= ~TYPE_MASK);
 #define INFER_DEFINED(a,b) \
 		if (UNDEFINED(a) || UNDEFINED(b)) { SET_UNDEFINED(a); } \
 		else { SET_DEFINED(a); }
@@ -127,9 +128,9 @@ typedef struct sym_ {
 } symbol_t;
 
 /* Symbol-specific directives. */
-#define IS_LBL(x) (((x)->kind & KIND_LBL) != 0)
-#define IS_VAR(x) (((x)->kind & KIND_VAR) != 0)
-#define IS_MAC(x) (((x)->kind & KIND_MAC) != 0)
+#define IS_LBL(x) ((x)->kind == KIND_LBL)
+#define IS_VAR(x) ((x)->kind == KIND_VAR)
+#define IS_MAC(x) ((x)->kind == KIND_MAC)
 
 struct pseudo;
 

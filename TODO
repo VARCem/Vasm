@@ -1,5 +1,3 @@
-- end-of-macro generates empty list line
-
 - macro variable arguments
 
 - first page title gets lost (we need to buffer lines for each page, and
@@ -15,6 +13,5 @@
   for dot labels, and so on.
   --> addr width, codebytes done
 
-- check (again) to make sure explicit assignments keep the assigned width
-  of a value ($0000 is 16bit, $00 is 8, and so on.)
-  label symbols must ALWAYS be 'word' type.
+- REPEAT still messes up line numbers
+

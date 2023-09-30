@@ -67,8 +67,8 @@
 #include "../target.h"
 
 
-#define USE_JS		0	// include "JS" pseudo
-#define USE_LDPI	0	// include "LDPI" pseudo
+#define USE_JS		1	// include "JS" pseudo
+#define USE_LDPI	1	// include "LDPI" pseudo
 
 
 typedef enum {

@@ -8,7 +8,7 @@
  *
  *		Handle the listfile output.
  *
- * Version:	@(#)list.c	1.0.13	2023/09/26
+ * Version:	@(#)list.c	1.0.14	2023/09/28
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
@@ -54,7 +54,7 @@
 
 #define LIST_PLENGTH	66		// number of lines per page
 #define LIST_PWIDTH	80		// number of characters per line
-#define LIST_AWIDTH	4		// number of digits in addresses
+#define LIST_AWIDTH	6		// number of digits in addresses
 #define LIST_NBYTES	4		// this many code bytes per line
 
 #define LIST_CHAR_FF	"\014"		// FormFeed character

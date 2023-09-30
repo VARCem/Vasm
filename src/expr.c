@@ -8,7 +8,7 @@
  *
  *		General expression handler.
  *
- * Version:	@(#)expr.c	1.0.12	2023/09/08
+ * Version:	@(#)expr.c	1.0.14	2023/09/28
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -91,6 +91,7 @@ number(char **p)
 {
     value_t num = { 0 };
     uint8_t type = 0;
+    int digits = 0;
     char *pt = *p;
 
     if (**p == '&') {
@@ -110,9 +111,10 @@ do_oct:
 		error(ERR_NUM, NULL);
 	do {
 		num.v = num.v * 8 + digit((*p)++);
+		digits++;
 	} while (**p >= '0' && **p <= '7');
 
-	type = NUM_TYPE(num.v);
+	type = (digits > 6) ? TYPE_DWORD : (digits > 3) ? TYPE_WORD : TYPE_BYTE;
     } else if (**p == '$') {
 	(*p)++;
 do_hex:
@@ -120,9 +122,10 @@ do_hex:
 		error(ERR_NUM, NULL);
 	do {
 		num.v = (num.v << 4) + digit((*p)++);
+		digits++;
 	} while (isxdigit(**p));
 
-	type = ((*p - pt) > 7) ? TYPE_DWORD : ((*p - pt) > 3) ? TYPE_WORD : NUM_TYPE(num.v);
+	type = (digits > 4) ? TYPE_DWORD : (digits > 2) ? TYPE_WORD : TYPE_BYTE;
     } else if (**p == '%') {
 	(*p)++;
 do_bin:
@@ -130,9 +133,10 @@ do_bin:
 		error(ERR_NUM, NULL);
 	do {
 		num.v = (num.v << 1) + digit((*p)++);
+		digits++;
 	} while ((**p == '0') || (**p == '1'));
 
-	type = ((*p - pt) > 17) ? TYPE_DWORD : ((*p - pt) > 9) ? TYPE_WORD : NUM_TYPE(num.v);
+	type = (digits > 16) ? TYPE_DWORD : (digits > 8) ? TYPE_WORD : TYPE_BYTE;
     } else if (**p == '0') {
 	/* Check if we have the '0x' (C style) form. */
 	(*p)++;
@@ -148,15 +152,16 @@ do_bin:
 	 * '0..', without the suffix. We will accept the
 	 * suffix, but not anything else.
 	 */
-	while (isxdigit(**p))
+	while (isxdigit(**p)) {
 		num.v = (num.v << 4) + digit((*p)++);
-
-	/* Set type. We do it here to avoid the extra char below. */
-	type = ((*p - pt) > 7) ? TYPE_DWORD : ((*p - pt) > 3) ? TYPE_WORD : NUM_TYPE(num.v);
+		digits++;
+	}
 
 	/* Quietly accept the '0..H' form. */
 	if (**p == 'h' || **p == 'H')
 		(*p)++;
+
+	type = (digits > 4) ? TYPE_DWORD : (digits > 2) ? TYPE_WORD : TYPE_BYTE;
     } else {
 	/* No explicit radix specifier present, go with the default. */
 	switch (radix) {
@@ -306,10 +311,10 @@ program_counter:
 	goto program_counter;
     } else if (**p == '\'') {
 	/* Single character. */
-	(*p)++;
 	if (is_end(**p) || (**p < 0x20))
 		error(ERR_CHR, NULL);
 
+	(*p)++;
 	res.v = **p;
 	res.t = TYPE_BYTE | VALUE_DEFINED;
 
@@ -332,7 +337,7 @@ program_counter:
 		(*p)++;
 
 	res.t = VALUE_DEFINED | NUM_TYPE(res.v);
-    } else if (isalpha(**p)) {
+    } else if (islabel(**p)) {
 	/* Symbol reference. */
 	nident(p, id);
 	pt = *p;
@@ -708,11 +713,7 @@ expr(char **p)
     } else if (starts_with(*p, "[!b]")) {
 	/* Forced conversion to byte. */
 	*p += 4;
-#if 1
 	res = to_byte(expr(p), 1);		// convert entire expression
-#else
-	res = to_byte(compare(p), 1);
-#endif
     } else if (starts_with(*p, "[d]")) {
 	/* Lossless conversion to doubleword. */
 	*p += 3;
@@ -725,11 +726,7 @@ expr(char **p)
     } else if (starts_with(*p, "[!w]")) {
 	/* Forced conversion to word. */
 	*p += 4;
-#if 1
 	res = to_word(expr(p), 1);		// convert entire expression
-#else
-	res = to_word(compare(p), 1);
-#endif
     } else {
 	/* Iterate. */
 	res = compare(p);
