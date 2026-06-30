@@ -10,12 +10,12 @@
  *
  * Usage:	vasm [-dCFqsTvPV] [-p processor] [-l fn] [-o fn] [-Dsym[=val]] file ...
  *
- * Version:	@(#)main.c	1.0.11	2023/06/19
+ * Version:	@(#)main.c	1.0.12	2026/06/29
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
  *
- *		Copyright 2023 Fred N. van Kempen.
+ *		Copyright 2023-2026 Fred N. van Kempen.
  *		Copyright 2022,2023 Bernd B”ckmann.
  *
  *		Redistribution and  use  in source  and binary forms, with
@@ -162,7 +162,7 @@ usage(const char *prog)
 static void
 banner(void)
 {
-    printf("%s %s\nCopyright 2023 Fred N. van Kempen, <waltje@varcem.com>\n",
+    printf("%s %s\nCopyright 2023-2026 Fred N. van Kempen, <waltje@varcem.com>\n",
 						APP_TITLE, version);
 #ifdef _WIN32
     printf("Copyright 2022,2023 Bernd B”ckmann, <bernd@varcem.com>\n\n");
@@ -295,7 +295,7 @@ main(int argc, char *argv[])
     filenames_idx = 0;
     while (optind < argc) {
 	if (! file_read(argv[optind], &text, &size)) {
-		fprintf(stderr, "Error loading file %s\n", argv[optind]);
+		fprintf(stderr, "Error loading file '%s'\n", argv[optind]);
 		errors = 1;
 		goto ret0;
 	}

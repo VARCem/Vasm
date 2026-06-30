@@ -46,7 +46,7 @@
 #
 
 ifndef ARCH
- ARCH		:= x86
+ ARCH		:= x64
 endif
 ifndef DEBUG
  DEBUG		:= n

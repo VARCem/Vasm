@@ -92,7 +92,6 @@ number(char **p)
     value_t num = { 0 };
     uint8_t type = 0;
     int digits = 0;
-    char *pt = *p;
 
     if (**p == '&') {
 	(*p)++;
@@ -140,10 +139,8 @@ do_bin:
     } else if (**p == '0') {
 	/* Check if we have the '0x' (C style) form. */
 	(*p)++;
-	pt = *p;
 	if (**p == 'x' || **p == 'X') {
 		(*p)++;
-		pt = *p;
 		goto do_hex;
 	}
 
