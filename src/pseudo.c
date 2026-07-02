@@ -8,7 +8,7 @@
  *
  *		Handle directives and pseudo-ops.
  *
- * Version:	@(#)pseudo.c	1.0.12	2023/09/28
+ * Version:	@(#)pseudo.c	1.0.13	2026/07/01
  *
  * Authors:	Fred N. van Kempen, <waltje@varcem.com>
  *		Bernd B”ckmann, <https://codeberg.org/boeckmann/asm6502>
@@ -418,6 +418,9 @@ do_echo(char **p, int pass)
 	next = 0;
 
 	skip_white(p);
+	if (IS_EOL(**p))
+		break;
+
 	if (**p == '"') {
 		string_lit(p, temp, STR_LEN, 1);
 		printf("%s", temp);

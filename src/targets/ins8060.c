@@ -21,11 +21,11 @@
  *		less power. Other than instruction timings, everything else
  *		was the same, so for code, nothing changed.
  *
- * Version:	@(#)ins8060.c	1.0.2	2023/09/06
+ * Version:	@(#)ins8060.c	1.0.3	2026/07/01
  *
  * Author:	Fred N. van Kempen, <waltje@varcem.com>
  *
- *		Copyright 2023 Fred N. van Kempen.
+ *		Copyright 2023-2026 Fred N. van Kempen.
  *
  *		Redistribution and  use  in source  and binary forms, with
  *		or  without modification, are permitted  provided that the
@@ -67,8 +67,8 @@
 #include "../target.h"
 
 
-#define USE_JS		1	// include "JS" pseudo
-#define USE_LDPI	1	// include "LDPI" pseudo
+#define USE_JS		0	// include "JS" pseudo
+#define USE_LDPI	0	// include "LDPI" pseudo
 
 
 typedef enum {
